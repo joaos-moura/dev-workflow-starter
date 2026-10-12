@@ -119,7 +119,7 @@ Trust do papel:
 
 O provedor OIDC usa a URL `https://token.actions.githubusercontent.com` e a audiência `sts.amazonaws.com`. Os dois nascem no mesmo CloudFormation do papel.
 
-Cada job que chama `configure-aws-credentials` declara no próprio job `id-token: write` e `contents: read`. O preview também declara `pull-requests: write` para comentar a URL. Não há workflow reutilizável. Nenhum job da AWS usa `environment` nem `pull_request_target`. A audiência enviada é `sts.amazonaws.com` e a região é `us-east-1`. O papel é lido de `vars.AWS_ROLE_ARN`.
+Cada job que chama `configure-aws-credentials` declara no próprio job `id-token: write` e `contents: read`. O preview também declara `pull-requests: write` para comentar a URL. Nenhum job que assume o papel usa `environment` nem `pull_request_target`. A audiência enviada é `sts.amazonaws.com` e a região é `us-east-1`. O papel é lido de `vars.AWS_ROLE_ARN`.
 
 A trust acima não inclui `sts:TagSession`. O workflow define `role-skip-session-tagging: true` para não pedir essa ação.
 
@@ -145,11 +145,29 @@ Em Settings → Secrets and variables → Actions → Variables, crie:
 | -------------- | ------------------------------------------------------------------- |
 | `AWS_ROLE_ARN` | `arn:aws:iam::642155085958:role/github-dev-workflow-starter-deploy` |
 
-É variável, não segredo. Sem ela, os workflows `Preview AWS` e `Ambiente dev` imprimem que a AWS está inerte e terminam verdes. Eles não chamam a AWS e não pedem credencial.
+É variável, não segredo. Sem ela, os jobs **Preview PR** e **CD Dev** imprimem que a AWS está inerte e terminam verdes. Eles não chamam a AWS e não pedem credencial.
 
-Com a variável definida, o job **Bootstrap do estado** roda antes do Terraform. Ele é idempotente: se o bucket `dws-tfstate-642155085958` não existir, o job cria; se existir, segue. Em seguida garante versionamento, criptografia AES256 e bloqueio de acesso público. O bucket de estado permanece privado. O bucket do site, criado pelo Terraform, precisa de leitura pública para o website hosting.
+Com a variável definida, o job garante o bucket de estado antes do Terraform. Ele é idempotente: se o bucket `dws-tfstate-642155085958` não existir, o job cria; se existir, segue. Em seguida garante versionamento, criptografia AES256 e bloqueio de acesso público. O bucket de estado permanece privado. O bucket do site, criado pelo Terraform, precisa de leitura pública para o website hosting.
 
-No pull request, o workflow comenta o plan, aplica o workspace do preview e comenta a URL do site e da API. No merge da `main`, aplica o workspace `dev` e publica o site no bucket. Ao fechar o PR, destrói só aquele workspace.
+No pull request, o job **Preview PR** comenta o plan, aplica o workspace do preview e comenta a URL do site e da API. No push da `main`, o job **CD Dev** aplica o workspace `dev` e publica o site no bucket. Ao fechar o PR, o mesmo job **Preview PR** destrói só aquele workspace.
+
+## Pipeline
+
+O workflow `Pipeline` encadeia os estágios com `needs`, nesta ordem:
+
+1. Detecção de tecnologia
+2. Gates de segurança (CodeQL, Dependabot, secret scan, reviewdog)
+3. Testes e cobertura
+4. Build e scan
+5. Preview PR
+6. CD Dev
+7. CD HML
+8. Perf HML
+9. CD PRD
+
+O secret scan usa o gitleaks. CodeQL, Dependabot e o reviewdog rodam no mesmo gate. Os workflows `CI`, `CodeQL` e `reviewdog` continuam separados, com os mesmos nomes de check.
+
+Push para o ECR, Datadog APM e os deploys reais de HML e PRD ficam simulados e marcados como **na versão empresa**. CD HML e Perf HML usam o ambiente `hml`. CD PRD usa o ambiente `prd`. A aprovação manual é a proteção desses ambientes. O revisor esperado é `@joaos-moura`, o mesmo do CODEOWNERS. Sem permissão para gravar a proteção, o ambiente nasce sem revisor.
 
 O site no S3 responde em HTTP. A URL da Lambda é HTTPS. O GitHub Pages é HTTPS e não depende da AWS.
 

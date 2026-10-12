@@ -1,0 +1,412 @@
+name: Pipeline
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pipeline-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deteccao:
+    name: Detecção de tecnologia
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - name: Ler a stack do repositório
+        run: |
+          echo "Node $(node -p 'process.version')"
+          node -e 'const p = JSON.parse(require("fs").readFileSync("package.json", "utf8")); const nomes = Object.keys(Object.assign({}, p.dependencies, p.devDependencies)).sort(); console.log("engines", p.engines.node); console.log("dependencias", nomes.join(", "));'
+          terraform version
+          echo "Arquivos de infraestrutura: $(find infra -name '*.tf' | wc -l) .tf"
+          echo "Stack detectada: React, Vite, TypeScript, Terraform e GitHub Actions."
+
+  gates:
+    name: Gates de segurança (CodeQL, Dependabot, secret scan, reviewdog)
+    needs: deteccao
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+      pull-requests: write
+      checks: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+
+      - name: Dependabot
+        run: |
+          test -f .github/dependabot.yml
+          grep -q 'package-ecosystem: npm' .github/dependabot.yml
+          grep -q 'package-ecosystem: github-actions' .github/dependabot.yml
+          grep -q 'package-ecosystem: terraform' .github/dependabot.yml
+          echo "Dependabot cobre npm, github-actions e terraform."
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: reviewdog
+        if: github.event_name == 'pull_request'
+        uses: reviewdog/action-eslint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-check
+          fail_level: error
+          filter_mode: nofilter
+          eslint_flags: .
+
+      - name: reviewdog na main
+        if: github.event_name != 'pull_request'
+        run: npx eslint .
+
+      - uses: github/codeql-action/analyze@v4
+
+  testes:
+    name: Testes e cobertura
+    needs: gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Vitest com cobertura
+        run: npx vitest run --coverage
+
+  build:
+    name: Build e scan
+    needs: testes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+      - name: Validar Terraform
+        working-directory: infra
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false
+          terraform validate
+
+      - name: Push para o ECR
+        run: |
+          echo "Push da imagem para o ECR: na versão empresa."
+          {
+            echo "### Build e scan"
+            echo "Push para o ECR: **na versão empresa**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  preview:
+    name: Preview PR
+    needs: build
+    if: always() && (needs.build.result == 'success' || github.event.action == 'closed')
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sem pull request
+        if: github.event_name != 'pull_request'
+        run: echo "O preview pertence ao pull request. Neste push não há workspace de preview."
+
+      - uses: actions/checkout@v7
+        if: github.event_name == 'pull_request'
+
+      - uses: ./.github/actions/porta-aws
+        id: porta
+        if: github.event_name == 'pull_request'
+        with:
+          papel: ${{ vars.AWS_ROLE_ARN }}
+          origem: ${{ github.event.pull_request.head.repo.full_name }}
+
+      - name: AWS inerte
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled != 'true'
+        run: echo "A variável AWS_ROLE_ARN não existe. O preview não cria recurso e termina verde."
+
+      - name: Mostrar claims OIDC
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && vars.DEBUG_OIDC == 'true'
+        run: .github/scripts/oidc-claims.sh
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true'
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          audience: sts.amazonaws.com
+          role-skip-session-tagging: true
+          role-session-name: dev-workflow-starter
+
+      - name: Garantir o bucket de estado
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true'
+        run: .github/scripts/bootstrap-estado.sh
+
+      - uses: actions/setup-node@v7
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action != 'closed'
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: hashicorp/setup-terraform@v4
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true'
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action != 'closed'
+        run: npm ci
+
+      - if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action != 'closed'
+        run: npx tsc --noEmit && npx vite build --base /
+
+      - name: Plan do preview
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action != 'closed'
+        env:
+          WORKSPACE: pr-${{ github.event.pull_request.number }}
+        run: .github/scripts/terraform-run.sh plan "$WORKSPACE"
+
+      - name: Comentar o plan
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action != 'closed'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MODO: plan
+        run: node .github/scripts/comentar-preview.mjs
+
+      - name: Apply do preview
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action != 'closed'
+        env:
+          WORKSPACE: pr-${{ github.event.pull_request.number }}
+        run: .github/scripts/terraform-run.sh apply "$WORKSPACE"
+
+      - name: Publicar o site e a URL
+        id: urls
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action != 'closed'
+        working-directory: infra
+        run: |
+          bucket="$(terraform output -raw bucket_name)"
+          aws s3 sync ../dist "s3://${bucket}" --delete
+          {
+            echo "site=$(terraform output -raw website_url)"
+            echo "api=$(terraform output -raw api_url)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comentar a URL
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action != 'closed'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MODO: url
+          SITE_URL: ${{ steps.urls.outputs.site }}
+          API_URL: ${{ steps.urls.outputs.api }}
+        run: node .github/scripts/comentar-preview.mjs
+
+      - name: Destruir o workspace do preview
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action == 'closed'
+        env:
+          WORKSPACE: pr-${{ github.event.pull_request.number }}
+        run: .github/scripts/terraform-run.sh destroy "$WORKSPACE"
+
+      - uses: actions/setup-node@v7
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action == 'closed'
+        with:
+          node-version: 22
+
+      - name: Comentar a remoção
+        if: github.event_name == 'pull_request' && steps.porta.outputs.enabled == 'true' && github.event.action == 'closed'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MODO: destroy
+        run: node .github/scripts/comentar-preview.mjs
+
+  cd_dev:
+    name: CD Dev
+    needs: preview
+    if: always() && github.event.action != 'closed' && needs.preview.result == 'success'
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Apply na main
+        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
+        run: echo "O apply do ambiente dev ocorre no push da main. Sem a variável AWS_ROLE_ARN o apply permanece inerte e o job termina verde."
+
+      - uses: actions/checkout@v7
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+      - uses: ./.github/actions/porta-aws
+        id: porta
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          papel: ${{ vars.AWS_ROLE_ARN }}
+
+      - name: AWS inerte
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled != 'true'
+        run: echo "A variável AWS_ROLE_ARN não existe. O ambiente dev não é aplicado e este job termina verde."
+
+      - name: Mostrar claims OIDC
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true' && vars.DEBUG_OIDC == 'true'
+        run: .github/scripts/oidc-claims.sh
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          audience: sts.amazonaws.com
+          role-skip-session-tagging: true
+          role-session-name: dev-workflow-starter
+
+      - name: Garantir o bucket de estado
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        run: .github/scripts/bootstrap-estado.sh
+
+      - uses: actions/setup-node@v7
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: hashicorp/setup-terraform@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        run: npm ci
+
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        run: npx tsc --noEmit && npx vite build --base /
+
+      - name: Apply do ambiente dev
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        run: .github/scripts/terraform-run.sh apply dev
+
+      - name: Publicar o site
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        working-directory: infra
+        run: |
+          bucket="$(terraform output -raw bucket_name)"
+          aws s3 sync ../dist "s3://${bucket}" --delete
+          echo "site=$(terraform output -raw website_url)"
+          echo "api=$(terraform output -raw api_url)"
+
+      - name: Datadog APM
+        run: |
+          echo "Datadog APM: na versão empresa."
+          {
+            echo "### CD Dev"
+            echo "Datadog APM: **na versão empresa**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  cd_hml:
+    name: CD HML
+    needs: cd_dev
+    if: needs.cd_dev.result == 'success'
+    environment: hml
+    permissions:
+      contents: read
+      deployments: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy simulado
+        run: |
+          echo "Deploy real em HML: na versão empresa."
+          echo "Não há conta HML nem push para o ECR neste starter."
+          {
+            echo "### CD HML"
+            echo "Deploy real em HML e push para o ECR: **na versão empresa**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  perf_hml:
+    name: Perf HML
+    needs: cd_hml
+    if: needs.cd_hml.result == 'success'
+    environment: hml
+    permissions:
+      contents: read
+      deployments: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Teste de carga
+        run: |
+          echo "Teste de carga contra HML real: na versão empresa."
+          echo "Não há endpoint de HML para medir."
+          {
+            echo "### Perf HML"
+            echo "Teste de carga contra HML real: **na versão empresa**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  cd_prd:
+    name: CD PRD
+    needs: perf_hml
+    if: needs.perf_hml.result == 'success'
+    environment: prd
+    permissions:
+      contents: read
+      deployments: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy simulado
+        run: |
+          echo "Deploy real em PRD: na versão empresa."
+          echo "Não há conta PRD nem Datadog APM neste starter."
+          {
+            echo "### CD PRD"
+            echo "Deploy real em PRD e Datadog APM: **na versão empresa**."
+          } >> "$GITHUB_STEP_SUMMARY"
