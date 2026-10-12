@@ -1,24 +1,52 @@
+import { Revelar } from "../componentes/Revelar";
 import { Secao } from "../componentes/Secao";
 
 const PECAS = [
-  "Template com o padrão do time, pronto para virar um repositório novo.",
-  "Ambiente por pull request, num workspace isolado, destruído quando o PR fecha.",
-  "Ambiente dev fixo, aplicado a cada merge na main.",
-  "Devcontainer para repetir o ambiente local em minutos.",
-  "CI honesto: lint, teste e build em todo pull request.",
-  "Qualidade no repositório: CodeQL, Dependabot e comentários de ESLint.",
-  "Deploy só pelo GitHub Actions, via OIDC, sem chave de acesso.",
+  {
+    sigla: "T",
+    titulo: "Template",
+    texto: "O padrão do time pronto para virar um repositório novo.",
+  },
+  {
+    sigla: "PR",
+    titulo: "Preview por pull request",
+    texto: "Workspace isolado, destruído quando o PR fecha.",
+  },
+  { sigla: "D", titulo: "Ambiente dev fixo", texto: "Aplicado a cada merge na main." },
+  { sigla: "{}", titulo: "Devcontainer", texto: "O ambiente local repetido em minutos." },
+  {
+    sigla: "CI",
+    titulo: "CI honesto + qualidade",
+    texto: "Lint, teste e build; CodeQL, Dependabot e ESLint no PR.",
+  },
+  {
+    sigla: "ID",
+    titulo: "Deploy via OIDC",
+    texto: "Só pelo GitHub Actions, sem chave de acesso.",
+  },
 ] as const;
 
 export function Solucao() {
   return (
-    <Secao id="solucao" titulo="A solução">
-      <p>O atalho gratuito cabe em sete peças. Nada disso pede serviço pago.</p>
-      <ul className="lista">
+    <Secao
+      id="solucao"
+      numero="02"
+      rotulo="A solução"
+      titulo="Sete peças, nenhum serviço pago."
+      sub="O starter entrega o miolo do padrão. Cada peça funciona sozinha e todas passam pelo GitHub."
+      alt
+    >
+      <Revelar className="grid g3">
         {PECAS.map((peca) => (
-          <li key={peca}>{peca}</li>
+          <article className="card" key={peca.titulo}>
+            <div className="ic" aria-hidden="true">
+              {peca.sigla}
+            </div>
+            <h3>{peca.titulo}</h3>
+            <p>{peca.texto}</p>
+          </article>
         ))}
-      </ul>
+      </Revelar>
     </Secao>
   );
 }
