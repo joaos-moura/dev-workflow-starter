@@ -34,6 +34,9 @@ jobs:
       - run: npm test
       - run: npm run build
 
+      - name: Validar template do Backstage
+        run: npm run validar:backstage
+
       - name: Validar Terraform
         working-directory: infra
         run: |

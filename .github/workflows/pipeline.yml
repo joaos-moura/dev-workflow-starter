@@ -5,13 +5,14 @@ on:
     types: [opened, synchronize, reopened, closed]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: pipeline-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   deteccao:
@@ -282,28 +283,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Apply na main
-        if: github.event_name != 'push' || github.ref != 'refs/heads/main'
-        run: echo "O apply do ambiente dev ocorre no push da main. Sem a variável AWS_ROLE_ARN o apply permanece inerte e o job termina verde."
+        if: (github.event_name != 'push' && github.event_name != 'workflow_dispatch') || github.ref != 'refs/heads/main'
+        run: echo "O apply do ambiente dev ocorre no push da main ou no workflow_dispatch dessa branch. Sem a variável AWS_ROLE_ARN o apply permanece inerte e o job termina verde."
 
       - uses: actions/checkout@v7
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
 
       - uses: ./.github/actions/porta-aws
         id: porta
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
         with:
           papel: ${{ vars.AWS_ROLE_ARN }}
 
       - name: AWS inerte
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled != 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled != 'true'
         run: echo "A variável AWS_ROLE_ARN não existe. O ambiente dev não é aplicado e este job termina verde."
 
       - name: Mostrar claims OIDC
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true' && vars.DEBUG_OIDC == 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true' && vars.DEBUG_OIDC == 'true'
         run: .github/scripts/oidc-claims.sh
 
       - uses: aws-actions/configure-aws-credentials@v6
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: us-east-1
@@ -312,33 +313,33 @@ jobs:
           role-session-name: dev-workflow-starter
 
       - name: Garantir o bucket de estado
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
         run: .github/scripts/bootstrap-estado.sh
 
       - uses: actions/setup-node@v7
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
         with:
           node-version: 22
           cache: npm
 
       - uses: hashicorp/setup-terraform@v4
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
         with:
           terraform_version: 1.16.5
           terraform_wrapper: false
 
-      - if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+      - if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
         run: npm ci
 
-      - if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+      - if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
         run: npx tsc --noEmit && npx vite build --base /
 
       - name: Apply do ambiente dev
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
         run: .github/scripts/terraform-run.sh apply dev
 
       - name: Publicar o site
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' && steps.porta.outputs.enabled == 'true'
         working-directory: infra
         run: |
           bucket="$(terraform output -raw bucket_name)"
@@ -357,7 +358,7 @@ jobs:
   cd_hml:
     name: CD HML
     needs: cd_dev
-    if: needs.cd_dev.result == 'success'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.cd_dev.result == 'success'
     environment: hml
     permissions:
       contents: read
@@ -376,7 +377,7 @@ jobs:
   perf_hml:
     name: Perf HML
     needs: cd_hml
-    if: needs.cd_hml.result == 'success'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.cd_hml.result == 'success'
     environment: hml
     permissions:
       contents: read
@@ -395,7 +396,7 @@ jobs:
   cd_prd:
     name: CD PRD
     needs: perf_hml
-    if: needs.perf_hml.result == 'success'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.perf_hml.result == 'success'
     environment: prd
     permissions:
       contents: read

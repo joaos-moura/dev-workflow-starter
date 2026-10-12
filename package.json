@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint . && prettier --check .",
+    "validar:backstage": "node .github/scripts/validar-template-backstage.mjs",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.71.2",
     "vite": "^8.3.4",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.4",
+    "yaml": "^2.9.1"
   }
 }

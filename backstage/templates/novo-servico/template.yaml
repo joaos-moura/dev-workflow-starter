@@ -1,0 +1,81 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: novo-servico
+  title: Novo serviço
+  description: Cria um repositório público a partir deste starter, grava o papel OIDC e dispara o pipeline.
+spec:
+  owner: group:default/time
+  type: service
+  parameters:
+    - title: Serviço
+      required:
+        - nome
+        - descricao
+        - owner
+      properties:
+        nome:
+          title: Nome
+          type: string
+          description: Nome do repositório. Letras minúsculas, números e hífen.
+          pattern: "^[a-z0-9]([a-z0-9-]{0,98}[a-z0-9])?$"
+          ui:autofocus: true
+        descricao:
+          title: Descrição
+          type: string
+          description: Uma linha sobre o serviço.
+          minLength: 1
+        owner:
+          title: Owner
+          type: string
+          description: Entidade do catálogo, por exemplo group:default/time.
+          default: group:default/time
+          minLength: 1
+  steps:
+    - id: copiar
+      name: Copiar o starter
+      action: fetch:plain
+      input:
+        url: https://github.com/joaos-moura/dev-workflow-starter/tree/main
+        targetPath: .
+    - id: catalogo
+      name: Gravar o catalog-info
+      action: fetch:template
+      input:
+        url: ./skeleton
+        targetPath: .
+        values:
+          nome: ${{ parameters.nome }}
+          descricao: ${{ parameters.descricao }}
+          owner: ${{ parameters.owner }}
+    - id: publicar
+      name: Publicar no GitHub
+      action: publish:github
+      input:
+        description: ${{ parameters.descricao }}
+        repoUrl: github.com?owner=joaos-moura&repo=${{ parameters.nome }}
+        repoVisibility: public
+        defaultBranch: main
+        protectDefaultBranch: false
+        repoVariables:
+          AWS_ROLE_ARN: arn:aws:iam::642155085958:role/github-dev-workflow-starter-deploy
+    - id: disparar
+      name: Disparar o bootstrap de dev
+      action: github:actions:dispatch
+      input:
+        repoUrl: github.com?owner=joaos-moura&repo=${{ parameters.nome }}
+        workflowId: pipeline.yml
+        branchOrTagName: main
+    - id: registrar
+      name: Registrar no catálogo
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publicar'].output.repoContentsUrl }}
+        catalogInfoPath: /catalog-info.yaml
+  output:
+    links:
+      - title: Repositório
+        url: ${{ steps['publicar'].output.remoteUrl }}
+      - title: Catálogo
+        icon: catalog
+        entityRef: ${{ steps['registrar'].output.entityRef }}

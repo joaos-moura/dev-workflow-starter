@@ -11,3 +11,5 @@ crash.log
 infra/lambda/*.zip
 .DS_Store
 *.log
+app-config.local.yaml
+backstage-local/

@@ -46,6 +46,7 @@ O Vite publica o site com a base `/dev-workflow-starter/`, que é o caminho do G
 - Preview por pull request no workspace `pr-<número>`, destruído quando o PR fecha.
 - Ambiente `dev` aplicado no merge da `main`.
 - Workflow manual `novo-projeto` para gerar outro repositório a partir deste template.
+- Formulário do Backstage para abrir o repositório sem mexer nas ferramentas. O passo a passo local está em [docs/backstage.md](docs/backstage.md).
 
 ## Terraform
 
@@ -81,7 +82,7 @@ A demonstração usa uma conta Dev separada da HML e da PRD.
 | Papel de deploy  | `arn:aws:iam::642155085958:role/github-dev-workflow-starter-deploy` |
 | Bucket de estado | `dws-tfstate-642155085958`                                          |
 
-O papel é criado uma vez, com CloudFormation, na conta acima. A trust aceita apenas este repositório e a política anexada é `PowerUserAccess`. O workflow não cria esse papel e não usa access key. Ele chama `aws-actions/configure-aws-credentials` com o ARN lido da variável de repositório `AWS_ROLE_ARN`.
+O papel é criado uma vez, com CloudFormation, na conta acima. A política anexada é `PowerUserAccess`. O workflow não cria esse papel e não usa access key. Ele chama `aws-actions/configure-aws-credentials` com o ARN lido da variável de repositório `AWS_ROLE_ARN`.
 
 Valor esperado de `AWS_ROLE_ARN`:
 
@@ -107,8 +108,8 @@ Trust do papel:
         },
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
-            "repo:joaos-moura/dev-workflow-starter:*",
-            "repo:joaos-moura@238336062/dev-workflow-starter@1416112642:*"
+            "repo:joaos-moura/*:*",
+            "repo:joaos-moura@238336062/*:*"
           ]
         }
       }
@@ -123,7 +124,9 @@ Cada job que chama `configure-aws-credentials` declara no próprio job `id-token
 
 A trust acima não inclui `sts:TagSession`. O workflow define `role-skip-session-tagging: true` para não pedir essa ação.
 
-O repositório emite o subject imutável (`use_immutable_subject: true`), no formato `repo:joaos-moura@238336062/dev-workflow-starter@1416112642:pull_request` ou com `ref:refs/heads/main`. A trust aceita esse formato e o formato só com o nome. O workflow não altera o subject.
+O repositório emite o subject imutável (`use_immutable_subject: true`), no formato `repo:joaos-moura@238336062/dev-workflow-starter@1416112642:pull_request` ou com `ref:refs/heads/main`. A trust aceita o formato com o nome e o formato imutável para qualquer repositório da conta `joaos-moura`. O workflow não altera o subject.
+
+A trust foi atualizada na stack `github-oidc-demo`. Um repositório criado pelo Backstage recebe a mesma variável `AWS_ROLE_ARN` e assume esse papel. A alternativa mais restritiva, um papel por repositório, está em [docs/backstage.md](docs/backstage.md). Este repositório não altera a AWS.
 
 O passo que imprime `iss`, `aud` e `sub` só roda quando a variável `DEBUG_OIDC` vale `true`. Sem ela, o passo fica de fora. O token não entra no log.
 
@@ -169,7 +172,19 @@ O secret scan usa o gitleaks. CodeQL, Dependabot e o reviewdog rodam no mesmo ga
 
 Push para o ECR, Datadog APM e os deploys reais de HML e PRD ficam simulados e marcados como **na versão empresa**. CD HML e Perf HML usam o ambiente `hml`. CD PRD usa o ambiente `prd`. A aprovação manual é a proteção desses ambientes. O revisor esperado é `@joaos-moura`, o mesmo do CODEOWNERS. Sem permissão para gravar a proteção, o ambiente nasce sem revisor.
 
+CD HML, Perf HML e CD PRD só rodam no push da `main`, e só se o job anterior passou. No pull request esses três ficam skipped. O check exigido na `main` continua sendo `CI`, que é outro workflow. Um job skipped não falha o Pipeline e não entra no lugar desse check.
+
+O grupo de concorrência é `pipeline-${{ github.ref }}`. No pull request, uma execução nova cancela a anterior. Na `main`, a execução em andamento segue. Preview e destroy são jobs deste mesmo workflow, no mesmo grupo. O CI usa `ci-${{ github.ref }}` e o Pages usa `pages`.
+
+O mesmo workflow aceita `workflow_dispatch` na `main`. O template do Backstage usa esse disparo. O CD Dev aplica no push e nesse disparo. CD HML, Perf HML e CD PRD não rodam no disparo.
+
 O site no S3 responde em HTTP. A URL da Lambda é HTTPS. O GitHub Pages é HTTPS e não depende da AWS.
+
+## Backstage
+
+O dev abre o serviço pelo Software Template `novo-servico`, na app local do Backstage. O formulário pede nome, descrição e owner, publica o repositório com o pipeline, grava `AWS_ROLE_ARN` e dispara o workflow em segundo plano. Não há portal hospedado. O token do GitHub fica em `app-config.local.yaml` ou na variável `GITHUB_TOKEN`, e não entra no git.
+
+O passo a passo está em [docs/backstage.md](docs/backstage.md).
 
 ## Novo projeto
 
