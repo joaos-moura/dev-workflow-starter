@@ -24,6 +24,9 @@ jobs:
 
       - uses: ./.github/actions/porta-aws
         id: porta
+        with:
+          papel: ${{ vars.AWS_ROLE_ARN }}
+          origem: ${{ github.event.pull_request.head.repo.full_name }}
 
       - uses: aws-actions/configure-aws-credentials@v6
         if: steps.porta.outputs.enabled == 'true'
