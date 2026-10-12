@@ -106,7 +106,10 @@ Trust do papel:
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:joaos-moura/dev-workflow-starter:*"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:joaos-moura/dev-workflow-starter:*",
+            "repo:joaos-moura@238336062/dev-workflow-starter@1416112642:*"
+          ]
         }
       }
     }
@@ -115,6 +118,14 @@ Trust do papel:
 ```
 
 O provedor OIDC usa a URL `https://token.actions.githubusercontent.com` e a audiência `sts.amazonaws.com`. Os dois nascem no mesmo CloudFormation do papel.
+
+Cada job que chama `configure-aws-credentials` declara no próprio job `id-token: write` e `contents: read`. O preview também declara `pull-requests: write` para comentar a URL. Não há workflow reutilizável. Nenhum job da AWS usa `environment` nem `pull_request_target`. A audiência enviada é `sts.amazonaws.com` e a região é `us-east-1`. O papel é lido de `vars.AWS_ROLE_ARN`.
+
+A trust acima não inclui `sts:TagSession`. O workflow define `role-skip-session-tagging: true` para não pedir essa ação.
+
+O repositório emite o subject imutável (`use_immutable_subject: true`), no formato `repo:joaos-moura@238336062/dev-workflow-starter@1416112642:pull_request` ou com `ref:refs/heads/main`. A trust aceita esse formato e o formato só com o nome. O workflow não altera o subject.
+
+O passo que imprime `iss`, `aud` e `sub` só roda quando a variável `DEBUG_OIDC` vale `true`. Sem ela, o passo fica de fora. O token não entra no log.
 
 ### Alerta de US$ 1
 
