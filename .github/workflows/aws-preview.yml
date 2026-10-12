@@ -3,6 +3,8 @@ name: Preview AWS
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
+  push:
+    branches: [cursor/exemplo-lock-state-6372]
 
 permissions:
   id-token: write
@@ -10,7 +12,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: preview-aws-${{ github.event.pull_request.number }}
+  group: preview-aws-${{ github.event.pull_request.number || '4' }}
   cancel-in-progress: false
 
 jobs:
@@ -80,21 +82,21 @@ jobs:
       - name: Plan do preview
         if: needs.bootstrap.outputs.enabled == 'true'
         env:
-          WORKSPACE: pr-${{ github.event.pull_request.number }}
+          WORKSPACE: pr-${{ github.event.pull_request.number || '4' }}
         run: .github/scripts/terraform-run.sh plan "$WORKSPACE"
 
       - name: Comentar o plan
         if: needs.bootstrap.outputs.enabled == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '4' }}
           MODO: plan
         run: node .github/scripts/comentar-preview.mjs
 
       - name: Apply do preview
         if: needs.bootstrap.outputs.enabled == 'true'
         env:
-          WORKSPACE: pr-${{ github.event.pull_request.number }}
+          WORKSPACE: pr-${{ github.event.pull_request.number || '4' }}
         run: .github/scripts/terraform-run.sh apply "$WORKSPACE"
 
       - name: Publicar o site e a URL
@@ -113,7 +115,7 @@ jobs:
         if: needs.bootstrap.outputs.enabled == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '4' }}
           MODO: url
           SITE_URL: ${{ steps.urls.outputs.site }}
           API_URL: ${{ steps.urls.outputs.api }}
@@ -148,7 +150,7 @@ jobs:
       - name: Destruir o workspace do preview
         if: needs.bootstrap.outputs.enabled == 'true'
         env:
-          WORKSPACE: pr-${{ github.event.pull_request.number }}
+          WORKSPACE: pr-${{ github.event.pull_request.number || '4' }}
         run: .github/scripts/terraform-run.sh destroy "$WORKSPACE"
 
       - uses: actions/setup-node@v5
@@ -160,6 +162,6 @@ jobs:
         if: needs.bootstrap.outputs.enabled == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number || '4' }}
           MODO: destroy
         run: node .github/scripts/comentar-preview.mjs
