@@ -32,7 +32,7 @@ jobs:
           origem: ${{ github.event.pull_request.head.repo.full_name }}
 
       - name: Mostrar claims OIDC
-        if: steps.porta.outputs.enabled == 'true'
+        if: steps.porta.outputs.enabled == 'true' && vars.DEBUG_OIDC == 'true'
         run: .github/scripts/oidc-claims.sh
 
       - uses: aws-actions/configure-aws-credentials@v6
@@ -84,7 +84,7 @@ jobs:
         run: npx tsc --noEmit && npx vite build --base /
 
       - name: Mostrar claims OIDC
-        if: needs.bootstrap.outputs.enabled == 'true'
+        if: needs.bootstrap.outputs.enabled == 'true' && vars.DEBUG_OIDC == 'true'
         run: .github/scripts/oidc-claims.sh
 
       - uses: aws-actions/configure-aws-credentials@v6
@@ -162,7 +162,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Mostrar claims OIDC
-        if: needs.bootstrap.outputs.enabled == 'true'
+        if: needs.bootstrap.outputs.enabled == 'true' && vars.DEBUG_OIDC == 'true'
         run: .github/scripts/oidc-claims.sh
 
       - uses: aws-actions/configure-aws-credentials@v6

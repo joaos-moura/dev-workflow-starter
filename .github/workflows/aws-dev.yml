@@ -30,7 +30,7 @@ jobs:
           papel: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Mostrar claims OIDC
-        if: steps.porta.outputs.enabled == 'true'
+        if: steps.porta.outputs.enabled == 'true' && vars.DEBUG_OIDC == 'true'
         run: .github/scripts/oidc-claims.sh
 
       - uses: aws-actions/configure-aws-credentials@v6
@@ -80,7 +80,7 @@ jobs:
         run: npx tsc --noEmit && npx vite build --base /
 
       - name: Mostrar claims OIDC
-        if: needs.bootstrap.outputs.enabled == 'true'
+        if: needs.bootstrap.outputs.enabled == 'true' && vars.DEBUG_OIDC == 'true'
         run: .github/scripts/oidc-claims.sh
 
       - uses: aws-actions/configure-aws-credentials@v6
@@ -102,3 +102,5 @@ jobs:
         run: |
           bucket="$(terraform output -raw bucket_name)"
           aws s3 sync ../dist "s3://${bucket}" --delete
+          echo "site=$(terraform output -raw website_url)"
+          echo "api=$(terraform output -raw api_url)"
