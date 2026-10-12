@@ -194,3 +194,5 @@ npm test
 npm run lint
 npm run build
 ```
+
+Este pull request só existe para criar um preview e destruí-lo ao fechar, sem merge.
