@@ -130,6 +130,31 @@ describe("seções da página", () => {
     expect(secao).toHaveTextContent("pronto em minutos");
   });
 
+  it("renderiza o pipeline antes e depois", () => {
+    const secao = regiao("Pipeline");
+    expect(within(secao).getByRole("heading", { name: "Antes" })).toBeInTheDocument();
+    expect(within(secao).getByRole("heading", { name: "Depois" })).toBeInTheDocument();
+    expect(secao).toHaveTextContent("Pedido de repositório ao time de infraestrutura.");
+    expect(secao).toHaveTextContent("Pedido de pipeline ao time de infraestrutura.");
+    expect(secao).toHaveTextContent("Pedido de papel de acesso.");
+    expect(secao).toHaveTextContent("Publicação só em HML.");
+    expect(secao).toHaveTextContent("Espera de dias.");
+    for (const etapa of [
+      "Detecção de tecnologia",
+      "Gates de segurança (CodeQL, Dependabot, secret scan, reviewdog)",
+      "Testes e cobertura",
+      "Build e scan",
+      "Preview PR",
+      "CD Dev",
+      "CD HML",
+      "Perf HML",
+      "CD PRD",
+    ]) {
+      expect(secao).toHaveTextContent(etapa);
+    }
+    expect(secao).toHaveTextContent("na versão empresa");
+  });
+
   it("renderiza como usar", () => {
     const secao = regiao("Como usar");
     expect(secao).toHaveTextContent("novo-projeto");

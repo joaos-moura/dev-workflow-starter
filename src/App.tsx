@@ -6,6 +6,7 @@ import { Contas } from "./secoes/Contas";
 import { Desafio } from "./secoes/Desafio";
 import { Objetivos } from "./secoes/Objetivos";
 import { Padrao } from "./secoes/Padrao";
+import { Pipeline } from "./secoes/Pipeline";
 import { Radar } from "./secoes/Radar";
 import { Solucao } from "./secoes/Solucao";
 
@@ -19,6 +20,7 @@ const SECOES = [
   ["#caminho", "Caminho feliz"],
   ["#radar", "Radar"],
   ["#antes-depois", "Antes e depois"],
+  ["#pipeline", "Pipeline"],
   ["#como-usar", "Como usar"],
 ] as const;
 
@@ -55,6 +57,7 @@ export function App() {
         <Caminho />
         <Radar />
         <AntesDepois />
+        <Pipeline />
         <ComoUsar />
       </main>
       <footer className="rodape">
