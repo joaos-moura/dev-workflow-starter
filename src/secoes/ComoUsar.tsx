@@ -17,6 +17,7 @@ export function ComoUsar() {
           <li key={passo}>{passo}</li>
         ))}
       </ol>
+      <p>O lock do state usa o arquivo nativo do S3 (use_lockfile), sem tabela extra.</p>
     </Secao>
   );
 }

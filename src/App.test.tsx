@@ -139,6 +139,7 @@ describe("seções da página", () => {
     expect(secao).toHaveTextContent("workspace dev");
     expect(secao).toHaveTextContent("GitHub Pages");
     expect(secao).toHaveTextContent("destrói o workspace do preview");
+    expect(secao).toHaveTextContent("use_lockfile");
   });
 });
 
