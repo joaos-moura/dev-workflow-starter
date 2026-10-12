@@ -172,7 +172,11 @@ O secret scan usa o gitleaks. CodeQL, Dependabot e o reviewdog rodam no mesmo ga
 
 Push para o ECR, Datadog APM e os deploys reais de HML e PRD ficam simulados e marcados como **na versão empresa**. CD HML e Perf HML usam o ambiente `hml`. CD PRD usa o ambiente `prd`. A aprovação manual é a proteção desses ambientes. O revisor esperado é `@joaos-moura`, o mesmo do CODEOWNERS. Sem permissão para gravar a proteção, o ambiente nasce sem revisor.
 
-O mesmo workflow aceita `workflow_dispatch` na `main`. O template do Backstage usa esse disparo. O CD Dev aplica no push e nesse disparo.
+CD HML, Perf HML e CD PRD só rodam no push da `main`, e só se o job anterior passou. No pull request esses três ficam skipped. O check exigido na `main` continua sendo `CI`, que é outro workflow. Um job skipped não falha o Pipeline e não entra no lugar desse check.
+
+O grupo de concorrência é `pipeline-${{ github.ref }}`. No pull request, uma execução nova cancela a anterior. Na `main`, a execução em andamento segue. Preview e destroy são jobs deste mesmo workflow, no mesmo grupo. O CI usa `ci-${{ github.ref }}` e o Pages usa `pages`.
+
+O mesmo workflow aceita `workflow_dispatch` na `main`. O template do Backstage usa esse disparo. O CD Dev aplica no push e nesse disparo. CD HML, Perf HML e CD PRD não rodam no disparo.
 
 O site no S3 responde em HTTP. A URL da Lambda é HTTPS. O GitHub Pages é HTTPS e não depende da AWS.
 

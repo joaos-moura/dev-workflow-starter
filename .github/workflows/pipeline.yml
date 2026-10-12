@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: pipeline-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   deteccao:
@@ -358,7 +358,7 @@ jobs:
   cd_hml:
     name: CD HML
     needs: cd_dev
-    if: needs.cd_dev.result == 'success'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.cd_dev.result == 'success'
     environment: hml
     permissions:
       contents: read
@@ -377,7 +377,7 @@ jobs:
   perf_hml:
     name: Perf HML
     needs: cd_hml
-    if: needs.cd_hml.result == 'success'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.cd_hml.result == 'success'
     environment: hml
     permissions:
       contents: read
@@ -396,7 +396,7 @@ jobs:
   cd_prd:
     name: CD PRD
     needs: perf_hml
-    if: needs.perf_hml.result == 'success'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.perf_hml.result == 'success'
     environment: prd
     permissions:
       contents: read
