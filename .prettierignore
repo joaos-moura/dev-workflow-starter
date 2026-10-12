@@ -6,3 +6,4 @@ package-lock.json
 *.zip
 tfplan
 plan.txt
+docs/design

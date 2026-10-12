@@ -1,23 +1,53 @@
+import { Revelar } from "../componentes/Revelar";
 import { Secao } from "../componentes/Secao";
-
-const PASSOS = [
-  "Gere um repositório a partir deste template, pelo GitHub ou pelo workflow novo-projeto.",
-  "Abra a pasta no devcontainer. Ele instala as dependências e deixa o Terraform disponível. Fora do container, use Node 22, npm ci e npm run dev.",
-  "Abra um pull request. O CI roda lint, teste e build. O reviewdog comenta o ESLint.",
-  "Sem a variável AWS_ROLE_ARN, os jobs da AWS terminam verdes e não criam recurso. Com a variável, o workflow garante o bucket de estado, comenta o plan, publica o preview no workspace pr-<número> e comenta a URL.",
-  "O merge na main é a aprovação: aplica o workspace dev e publica o GitHub Pages.",
-  "Fechar o pull request destrói o workspace do preview.",
-] as const;
 
 export function ComoUsar() {
   return (
-    <Secao id="como-usar" titulo="Como usar">
-      <ol className="passos">
-        {PASSOS.map((passo) => (
-          <li key={passo}>{passo}</li>
-        ))}
-      </ol>
-      <p>O lock do state usa o arquivo nativo do S3 (use_lockfile), sem tabela extra.</p>
+    <Secao id="usar" numero="11" rotulo="Como usar" titulo="Do template ao preview em seis passos.">
+      <Revelar className="steps">
+        <ol>
+          <li>
+            <b>Gere o repositório</b>Pelo GitHub ou pelo workflow novo-projeto.
+          </li>
+          <li>
+            <b>Abra no devcontainer</b>Dependências e Terraform prontos. Fora dele: Node 22.
+          </li>
+          <li>
+            <b>Abra um pull request</b>CI roda lint, teste e build; reviewdog comenta o ESLint.
+          </li>
+          <li>
+            <b>Defina AWS_ROLE_ARN</b>O workflow garante o bucket de estado, comenta o plan e
+            publica o preview em <code className="i">pr-&lt;n&gt;</code>.
+          </li>
+          <li>
+            <b>Faça o merge</b>Aplica o workspace dev e publica o GitHub Pages.
+          </li>
+          <li>
+            <b>Feche o PR</b>O workspace do preview é destruído.
+          </li>
+        </ol>
+        <pre>
+          <span className="bar">
+            <span>terminal</span>
+            <span>bash</span>
+          </span>
+          <code>
+            <span className="c"># fora do devcontainer</span>
+            {"\nnpm ci\nnpm run dev\n\n"}
+            <span className="c"># habilita os jobs da AWS (variável do repositório)</span>
+            {"\ngh variable set "}
+            <span className="k2">AWS_ROLE_ARN</span>
+            {" \\\n  --body "}
+            <span className="s">
+              &quot;arn:aws:iam::&lt;conta&gt;:role/github-&lt;repo&gt;-deploy&quot;
+            </span>
+          </code>
+        </pre>
+      </Revelar>
+      <p className="note">
+        Nada é criado na AWS enquanto a variável AWS_ROLE_ARN não existir. O lock do state usa o
+        use_lockfile do S3, sem tabela extra.
+      </p>
     </Secao>
   );
 }
