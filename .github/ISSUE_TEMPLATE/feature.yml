@@ -1,0 +1,25 @@
+name: Funcionalidade
+description: Uma melhoria no template, no site ou no fluxo
+title: "feat: "
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qual problema isso resolve
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Proposta
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativa
+    attributes:
+      label: Alternativa considerada
+      description: O que mais foi pensado e por que ficou de fora.
+    validations:
+      required: false

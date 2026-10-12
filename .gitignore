@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+.terraform
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+plan.txt
+crash.log
+infra/lambda/*.zip
+.DS_Store
+*.log

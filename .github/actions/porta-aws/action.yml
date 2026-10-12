@@ -1,0 +1,29 @@
+name: Porta da AWS
+description: Segue com a AWS somente quando a variável AWS_ROLE_ARN existe.
+
+outputs:
+  enabled:
+    description: true quando os passos da AWS devem rodar
+    value: ${{ steps.gate.outputs.enabled }}
+
+runs:
+  using: composite
+  steps:
+    - id: gate
+      shell: bash
+      env:
+        PAPEL: ${{ vars.AWS_ROLE_ARN }}
+        ORIGEM: ${{ github.event.pull_request.head.repo.full_name }}
+        REPOSITORIO: ${{ github.repository }}
+      run: |
+        if [[ -n "$ORIGEM" && "$ORIGEM" != "$REPOSITORIO" ]]; then
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          echo "Pull request de fora deste repositório. A AWS fica inerte."
+          exit 0
+        fi
+        if [[ -z "$PAPEL" ]]; then
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          echo "A variável AWS_ROLE_ARN não existe. Nenhum recurso será criado e o job termina verde."
+          exit 0
+        fi
+        echo "enabled=true" >> "$GITHUB_OUTPUT"

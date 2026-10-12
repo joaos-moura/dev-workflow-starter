@@ -1,0 +1,229 @@
+:root {
+  color-scheme: light;
+  --papel: #f6f3ec;
+  --cartao: #fffdf9;
+  --tinta: #1d1b17;
+  --suave: #5e584e;
+  --linha: #e3dcd0;
+  --verde: #1e6844;
+  --verde-suave: #e7f3eb;
+  --codigo: #efeae1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3 {
+  font-family: Georgia, "Iowan Old Style", Palatino, serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+p {
+  margin: 0 0 0.9rem;
+}
+
+a {
+  color: var(--verde);
+}
+
+code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.92em;
+  background: var(--codigo);
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--verde);
+  outline-offset: 3px;
+}
+
+.pular {
+  position: absolute;
+  left: -999px;
+  background: var(--cartao);
+  padding: 0.4rem 0.7rem;
+}
+
+.pular:focus {
+  left: 1rem;
+  top: 1rem;
+  z-index: 2;
+}
+
+.pagina {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2.4rem 1.4rem 3rem;
+}
+
+.marca {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--suave);
+}
+
+h1 {
+  margin: 0.35rem 0 0.7rem;
+  font-size: clamp(2.2rem, 4vw, 3.5rem);
+  max-width: 16ch;
+}
+
+.resumo {
+  max-width: 40rem;
+  color: var(--suave);
+  font-size: 1.15rem;
+}
+
+nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 1rem;
+  margin: 1.4rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+nav a {
+  color: var(--tinta);
+  text-decoration: none;
+  border-bottom: 1px solid var(--linha);
+}
+
+nav a:hover {
+  border-bottom-color: var(--verde);
+}
+
+.secao {
+  padding: 2.1rem 0 0.4rem;
+  border-top: 1px solid var(--linha);
+  margin-top: 2rem;
+}
+
+.secao h2 {
+  margin: 0 0 0.85rem;
+  font-size: 1.85rem;
+}
+
+.lista,
+.passos {
+  margin: 0.2rem 0 0.4rem;
+  padding-left: 1.2rem;
+}
+
+.lista li,
+.passos li {
+  margin: 0.4rem 0;
+}
+
+.passos li::marker {
+  color: var(--verde);
+}
+
+.camadas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.75rem;
+}
+
+.camadas li,
+.cartao,
+.antes,
+.depois {
+  background: var(--cartao);
+  border: 1px solid var(--linha);
+  border-radius: 14px;
+  padding: 0.9rem 1rem 0.3rem;
+}
+
+.camadas strong {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.grade,
+.comparacao {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.grade {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.comparacao {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.cartao h3,
+.antes h3,
+.depois h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.25rem;
+}
+
+.depois {
+  background: var(--verde-suave);
+}
+
+.diagrama {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0.4rem 0 1rem;
+  background: var(--cartao);
+  border: 1px solid var(--linha);
+  border-radius: 14px;
+}
+
+.lema {
+  margin: 1.2rem 0 0.2rem;
+  padding: 0.7rem 0 0.7rem 1rem;
+  border-left: 3px solid var(--verde);
+  background: var(--cartao);
+  font-family: Georgia, "Iowan Old Style", Palatino, serif;
+  font-size: clamp(1.5rem, 2vw, 1.9rem);
+}
+
+.rodape {
+  margin-top: 2.4rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--linha);
+  color: var(--suave);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: light;
+  }
+}
