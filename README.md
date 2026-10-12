@@ -82,7 +82,7 @@ A demonstração usa uma conta Dev separada da HML e da PRD.
 | Papel de deploy  | `arn:aws:iam::642155085958:role/github-dev-workflow-starter-deploy` |
 | Bucket de estado | `dws-tfstate-642155085958`                                          |
 
-O papel é criado uma vez, com CloudFormation, na conta acima. A trust aceita apenas este repositório e a política anexada é `PowerUserAccess`. O workflow não cria esse papel e não usa access key. Ele chama `aws-actions/configure-aws-credentials` com o ARN lido da variável de repositório `AWS_ROLE_ARN`.
+O papel é criado uma vez, com CloudFormation, na conta acima. A política anexada é `PowerUserAccess`. O workflow não cria esse papel e não usa access key. Ele chama `aws-actions/configure-aws-credentials` com o ARN lido da variável de repositório `AWS_ROLE_ARN`.
 
 Valor esperado de `AWS_ROLE_ARN`:
 
@@ -108,8 +108,8 @@ Trust do papel:
         },
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
-            "repo:joaos-moura/dev-workflow-starter:*",
-            "repo:joaos-moura@238336062/dev-workflow-starter@1416112642:*"
+            "repo:joaos-moura/*:*",
+            "repo:joaos-moura@238336062/*:*"
           ]
         }
       }
@@ -124,9 +124,9 @@ Cada job que chama `configure-aws-credentials` declara no próprio job `id-token
 
 A trust acima não inclui `sts:TagSession`. O workflow define `role-skip-session-tagging: true` para não pedir essa ação.
 
-O repositório emite o subject imutável (`use_immutable_subject: true`), no formato `repo:joaos-moura@238336062/dev-workflow-starter@1416112642:pull_request` ou com `ref:refs/heads/main`. A trust aceita esse formato e o formato só com o nome. O workflow não altera o subject.
+O repositório emite o subject imutável (`use_immutable_subject: true`), no formato `repo:joaos-moura@238336062/dev-workflow-starter@1416112642:pull_request` ou com `ref:refs/heads/main`. A trust aceita o formato com o nome e o formato imutável para qualquer repositório da conta `joaos-moura`. O workflow não altera o subject.
 
-A trust acima cobre só este repositório. Um repositório criado pelo Backstage recebe a mesma variável `AWS_ROLE_ARN` e falha no AssumeRole até a trust ganhar um curinga do dono ou até existir um papel por repositório. As duas opções, com prós e contras, estão em [docs/backstage.md](docs/backstage.md). Este repositório não altera a AWS.
+A trust foi atualizada na stack `github-oidc-demo`. Um repositório criado pelo Backstage recebe a mesma variável `AWS_ROLE_ARN` e assume esse papel. A alternativa mais restritiva, um papel por repositório, está em [docs/backstage.md](docs/backstage.md). Este repositório não altera a AWS.
 
 O passo que imprime `iss`, `aud` e `sub` só roda quando a variável `DEBUG_OIDC` vale `true`. Sem ela, o passo fica de fora. O token não entra no log.
 

@@ -104,21 +104,18 @@ O owner padrão do formulário é `group:default/time`, o Group do `catalog-info
 
 ## Papel OIDC nos repositórios novos
 
-A trust de hoje aceita só este repositório, nos dois formatos de subject:
-
-- `repo:joaos-moura/dev-workflow-starter:*`
-- `repo:joaos-moura@238336062/dev-workflow-starter@1416112642:*`
-
-O formulário grava em todo repositório novo o mesmo ARN. Este repositório não altera a trust, o papel nem a conta. Com a trust atual, o **CD Dev** do repositório novo chama `AssumeRoleWithWebIdentity` e a AWS recusa, porque o subject não é o deste repositório. Há duas saídas. As duas ficam fora deste template.
-
-### Opção A — curinga do dono
-
-Incluir na mesma trust, além dos dois subjects deste repositório:
+A trust do papel `github-dev-workflow-starter-deploy` foi atualizada na stack `github-oidc-demo`. A audiência continua `sts.amazonaws.com`. O `StringLike` do subject tem dois valores:
 
 - `repo:joaos-moura/*:*`
 - `repo:joaos-moura@238336062/*:*`
 
-O segundo cobre o subject imutável, no formato `repo:joaos-moura@238336062/<repo>@<id>:<contexto>`. O primeiro cobre o formato só com o nome, se algum repositório emitir assim.
+O segundo cobre o subject imutável, no formato `repo:joaos-moura@238336062/<repo>@<id>:<contexto>`. O primeiro cobre o formato só com o nome. Este repositório entra nos dois, e um repositório novo da mesma conta também. O formulário grava o mesmo ARN:
+
+```text
+arn:aws:iam::642155085958:role/github-dev-workflow-starter-deploy
+```
+
+Este repositório não altera a trust, o papel nem a conta. A atualização da stack ficou fora daqui.
 
 Prós: um papel serve para o repositório novo. O ARN gravado pelo formulário continua válido. Não nasce papel por serviço.
 
@@ -126,7 +123,7 @@ Contras: qualquer repositório da conta `joaos-moura` pode assumir o papel, e a 
 
 ### Opção B — um papel por repositório
 
-Criar um papel cujo nome siga o prefixo permitido e uma trust só daquele repositório, de novo nos dois formatos:
+A alternativa mais restritiva é um papel por repositório, com trust só daquele repositório, de novo nos dois formatos:
 
 - `repo:joaos-moura/<nome>:*`
 - `repo:joaos-moura@238336062/<nome>@<id-do-repositorio>:*`
