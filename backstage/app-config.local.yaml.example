@@ -1,0 +1,6 @@
+# Cole este trecho em app-config.local.yaml da app local do Backstage.
+# Esse arquivo fica de fora do git. O token não entra neste repositório.
+integrations:
+  github:
+    - host: github.com
+      token: ${GITHUB_TOKEN}

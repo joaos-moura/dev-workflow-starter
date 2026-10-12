@@ -6,10 +6,18 @@
       "version": "1.16.5"
     }
   },
-  "forwardPorts": [5173],
+  "forwardPorts": [5173, 3000, 7007],
   "portsAttributes": {
     "5173": {
       "label": "Vite",
+      "onAutoForward": "notify"
+    },
+    "3000": {
+      "label": "Backstage",
+      "onAutoForward": "notify"
+    },
+    "7007": {
+      "label": "Backstage backend",
       "onAutoForward": "notify"
     }
   },

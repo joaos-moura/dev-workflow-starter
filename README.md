@@ -46,6 +46,7 @@ O Vite publica o site com a base `/dev-workflow-starter/`, que é o caminho do G
 - Preview por pull request no workspace `pr-<número>`, destruído quando o PR fecha.
 - Ambiente `dev` aplicado no merge da `main`.
 - Workflow manual `novo-projeto` para gerar outro repositório a partir deste template.
+- Formulário do Backstage para abrir o repositório sem mexer nas ferramentas. O passo a passo local está em [docs/backstage.md](docs/backstage.md).
 
 ## Terraform
 
@@ -125,6 +126,8 @@ A trust acima não inclui `sts:TagSession`. O workflow define `role-skip-session
 
 O repositório emite o subject imutável (`use_immutable_subject: true`), no formato `repo:joaos-moura@238336062/dev-workflow-starter@1416112642:pull_request` ou com `ref:refs/heads/main`. A trust aceita esse formato e o formato só com o nome. O workflow não altera o subject.
 
+A trust acima cobre só este repositório. Um repositório criado pelo Backstage recebe a mesma variável `AWS_ROLE_ARN` e falha no AssumeRole até a trust ganhar um curinga do dono ou até existir um papel por repositório. As duas opções, com prós e contras, estão em [docs/backstage.md](docs/backstage.md). Este repositório não altera a AWS.
+
 O passo que imprime `iss`, `aud` e `sub` só roda quando a variável `DEBUG_OIDC` vale `true`. Sem ela, o passo fica de fora. O token não entra no log.
 
 ### Alerta de US$ 1
@@ -169,7 +172,15 @@ O secret scan usa o gitleaks. CodeQL, Dependabot e o reviewdog rodam no mesmo ga
 
 Push para o ECR, Datadog APM e os deploys reais de HML e PRD ficam simulados e marcados como **na versão empresa**. CD HML e Perf HML usam o ambiente `hml`. CD PRD usa o ambiente `prd`. A aprovação manual é a proteção desses ambientes. O revisor esperado é `@joaos-moura`, o mesmo do CODEOWNERS. Sem permissão para gravar a proteção, o ambiente nasce sem revisor.
 
+O mesmo workflow aceita `workflow_dispatch` na `main`. O template do Backstage usa esse disparo. O CD Dev aplica no push e nesse disparo.
+
 O site no S3 responde em HTTP. A URL da Lambda é HTTPS. O GitHub Pages é HTTPS e não depende da AWS.
+
+## Backstage
+
+O dev abre o serviço pelo Software Template `novo-servico`, na app local do Backstage. O formulário pede nome, descrição e owner, publica o repositório com o pipeline, grava `AWS_ROLE_ARN` e dispara o workflow em segundo plano. Não há portal hospedado. O token do GitHub fica em `app-config.local.yaml` ou na variável `GITHUB_TOKEN`, e não entra no git.
+
+O passo a passo está em [docs/backstage.md](docs/backstage.md).
 
 ## Novo projeto
 
