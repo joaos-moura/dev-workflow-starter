@@ -16,6 +16,9 @@ concurrency:
 jobs:
   bootstrap:
     name: Bootstrap do estado
+    permissions:
+      id-token: write
+      contents: read
     runs-on: ubuntu-latest
     outputs:
       enabled: ${{ steps.porta.outputs.enabled }}
@@ -28,11 +31,17 @@ jobs:
           papel: ${{ vars.AWS_ROLE_ARN }}
           origem: ${{ github.event.pull_request.head.repo.full_name }}
 
+      - name: Mostrar claims OIDC
+        if: steps.porta.outputs.enabled == 'true'
+        run: .github/scripts/oidc-claims.sh
+
       - uses: aws-actions/configure-aws-credentials@v6
         if: steps.porta.outputs.enabled == 'true'
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: us-east-1
+          audience: sts.amazonaws.com
+          role-skip-session-tagging: true
           role-session-name: dev-workflow-starter
 
       - name: Garantir o bucket de estado
@@ -43,6 +52,10 @@ jobs:
     name: Preview
     needs: bootstrap
     if: github.event.action != 'closed'
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: AWS inerte
@@ -70,11 +83,17 @@ jobs:
       - if: needs.bootstrap.outputs.enabled == 'true'
         run: npx tsc --noEmit && npx vite build --base /
 
+      - name: Mostrar claims OIDC
+        if: needs.bootstrap.outputs.enabled == 'true'
+        run: .github/scripts/oidc-claims.sh
+
       - uses: aws-actions/configure-aws-credentials@v6
         if: needs.bootstrap.outputs.enabled == 'true'
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: us-east-1
+          audience: sts.amazonaws.com
+          role-skip-session-tagging: true
           role-session-name: dev-workflow-starter
 
       - name: Plan do preview
@@ -123,6 +142,10 @@ jobs:
     name: Destruir preview
     needs: bootstrap
     if: github.event.action == 'closed'
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: AWS inerte
@@ -138,11 +161,17 @@ jobs:
           terraform_version: 1.16.5
           terraform_wrapper: false
 
+      - name: Mostrar claims OIDC
+        if: needs.bootstrap.outputs.enabled == 'true'
+        run: .github/scripts/oidc-claims.sh
+
       - uses: aws-actions/configure-aws-credentials@v6
         if: needs.bootstrap.outputs.enabled == 'true'
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: us-east-1
+          audience: sts.amazonaws.com
+          role-skip-session-tagging: true
           role-session-name: dev-workflow-starter
 
       - name: Destruir o workspace do preview

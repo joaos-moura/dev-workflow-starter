@@ -116,6 +116,10 @@ Trust do papel:
 
 O provedor OIDC usa a URL `https://token.actions.githubusercontent.com` e a audiência `sts.amazonaws.com`. Os dois nascem no mesmo CloudFormation do papel.
 
+Cada job que chama `configure-aws-credentials` declara no próprio job `id-token: write` e `contents: read`. O preview também declara `pull-requests: write` para comentar a URL. Não há workflow reutilizável. Nenhum job da AWS usa `environment` nem `pull_request_target`, então o `sub` segue o evento: `repo:joaos-moura/dev-workflow-starter:ref:refs/heads/main` no push da main, e `repo:joaos-moura/dev-workflow-starter:pull_request` no preview. Os dois cabem no `StringLike` acima. A audiência enviada é `sts.amazonaws.com` e a região é `us-east-1`. O papel é lido de `vars.AWS_ROLE_ARN`.
+
+A trust acima não inclui `sts:TagSession`. O workflow define `role-skip-session-tagging: true` para não pedir essa ação. Antes de assumir o papel, o job imprime só as claims `iss`, `aud` e `sub`. O token não entra no log.
+
 ### Alerta de US$ 1
 
 Antes do primeiro apply, na conta `642155085958`:
