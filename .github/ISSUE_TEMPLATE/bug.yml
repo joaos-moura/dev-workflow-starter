@@ -1,0 +1,38 @@
+name: Bug
+description: Algo quebrou no site, no CI ou no fluxo de preview
+title: "fix: "
+body:
+  - type: textarea
+    id: aconteceu
+    attributes:
+      label: O que aconteceu
+      description: Descreva o comportamento observado.
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que era esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: passos
+    attributes:
+      label: Como reproduzir
+      description: Liste os passos, com comando ou URL quando houver.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ambiente
+    attributes:
+      label: Onde aconteceu
+      options:
+        - Local ou devcontainer
+        - CI
+        - GitHub Pages
+        - Preview ou ambiente dev
+    validations:
+      required: true

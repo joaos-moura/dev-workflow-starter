@@ -1,0 +1,162 @@
+name: Preview AWS
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: preview-aws-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    name: Bootstrap do estado
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.porta.outputs.enabled }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/porta-aws
+        id: porta
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        if: steps.porta.outputs.enabled == 'true'
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: dev-workflow-starter
+
+      - name: Garantir o bucket de estado
+        if: steps.porta.outputs.enabled == 'true'
+        run: .github/scripts/bootstrap-estado.sh
+
+  preview:
+    name: Preview
+    needs: bootstrap
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: AWS inerte
+        if: needs.bootstrap.outputs.enabled != 'true'
+        run: echo "A variável AWS_ROLE_ARN não existe. O preview não cria recurso e termina verde."
+
+      - uses: actions/checkout@v7
+        if: needs.bootstrap.outputs.enabled == 'true'
+
+      - uses: actions/setup-node@v5
+        if: needs.bootstrap.outputs.enabled == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: hashicorp/setup-terraform@v4
+        if: needs.bootstrap.outputs.enabled == 'true'
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - if: needs.bootstrap.outputs.enabled == 'true'
+        run: npm ci
+
+      - if: needs.bootstrap.outputs.enabled == 'true'
+        run: npx tsc --noEmit && npx vite build --base /
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        if: needs.bootstrap.outputs.enabled == 'true'
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: dev-workflow-starter
+
+      - name: Plan do preview
+        if: needs.bootstrap.outputs.enabled == 'true'
+        env:
+          WORKSPACE: pr-${{ github.event.pull_request.number }}
+        run: .github/scripts/terraform-run.sh plan "$WORKSPACE"
+
+      - name: Comentar o plan
+        if: needs.bootstrap.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MODO: plan
+        run: node .github/scripts/comentar-preview.mjs
+
+      - name: Apply do preview
+        if: needs.bootstrap.outputs.enabled == 'true'
+        env:
+          WORKSPACE: pr-${{ github.event.pull_request.number }}
+        run: .github/scripts/terraform-run.sh apply "$WORKSPACE"
+
+      - name: Publicar o site e a URL
+        id: urls
+        if: needs.bootstrap.outputs.enabled == 'true'
+        working-directory: infra
+        run: |
+          bucket="$(terraform output -raw bucket_name)"
+          aws s3 sync ../dist "s3://${bucket}" --delete
+          {
+            echo "site=$(terraform output -raw website_url)"
+            echo "api=$(terraform output -raw api_url)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comentar a URL
+        if: needs.bootstrap.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MODO: url
+          SITE_URL: ${{ steps.urls.outputs.site }}
+          API_URL: ${{ steps.urls.outputs.api }}
+        run: node .github/scripts/comentar-preview.mjs
+
+  destruir:
+    name: Destruir preview
+    needs: bootstrap
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: AWS inerte
+        if: needs.bootstrap.outputs.enabled != 'true'
+        run: echo "A variável AWS_ROLE_ARN não existe. Não há preview para destruir."
+
+      - uses: actions/checkout@v7
+        if: needs.bootstrap.outputs.enabled == 'true'
+
+      - uses: hashicorp/setup-terraform@v4
+        if: needs.bootstrap.outputs.enabled == 'true'
+        with:
+          terraform_version: 1.16.5
+          terraform_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        if: needs.bootstrap.outputs.enabled == 'true'
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: dev-workflow-starter
+
+      - name: Destruir o workspace do preview
+        if: needs.bootstrap.outputs.enabled == 'true'
+        env:
+          WORKSPACE: pr-${{ github.event.pull_request.number }}
+        run: .github/scripts/terraform-run.sh destroy "$WORKSPACE"
+
+      - uses: actions/setup-node@v5
+        if: needs.bootstrap.outputs.enabled == 'true'
+        with:
+          node-version: 22
+
+      - name: Comentar a remoção
+        if: needs.bootstrap.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MODO: destroy
+        run: node .github/scripts/comentar-preview.mjs

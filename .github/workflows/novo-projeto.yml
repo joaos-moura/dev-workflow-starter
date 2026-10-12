@@ -1,0 +1,26 @@
+name: novo-projeto
+
+on:
+  workflow_dispatch:
+    inputs:
+      nome:
+        description: Nome do novo repositório (letras minúsculas, números e hífen)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  criar:
+    name: Criar repositório
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Criar a partir do template
+        env:
+          NEW_REPO_TOKEN: ${{ secrets.NEW_REPO_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          NOME: ${{ inputs.nome }}
+        run: .github/scripts/novo-projeto.sh
