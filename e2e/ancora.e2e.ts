@@ -11,8 +11,8 @@ async function ancorasDoMenu(page: Page) {
   const ancoras = await page
     .locator("nav .links a")
     .evaluateAll((links) => links.map((link) => link.getAttribute("href") ?? ""));
-  expect(ancoras.length).toBeGreaterThan(0);
-  return ancoras;
+  expect(ancoras).toEqual(expect.arrayContaining(["#custos", "#usar"]));
+  return [...new Set([...ancoras, "#futuro"])];
 }
 
 async function distanciaDaBarra(page: Page, hash: string) {
