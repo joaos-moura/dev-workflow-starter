@@ -14,6 +14,7 @@ export const FONTES = {
   githubSeguranca: "https://github.com/security/plans",
   githubRunners: "https://docs.github.com/en/billing/reference/actions-runner-pricing",
   githubActions: "https://docs.github.com/en/billing/concepts/product-billing/github-actions",
+  githubLimites: "https://docs.github.com/en/actions/reference/limits",
   githubGhas:
     "https://docs.github.com/en/billing/concepts/product-billing/github-advanced-security",
   githubCodeScanning:
@@ -23,7 +24,6 @@ export const FONTES = {
 
 export type IdPreco =
   | "azBasic"
-  | "azTestPlans"
   | "azJobMicrosoft"
   | "azJobSelfHosted"
   | "azCodeSecurity"
@@ -55,14 +55,6 @@ export const FICHAS: readonly FichaPreco[] = [
     plataforma: "Azure DevOps",
     item: "Basic (do 6º usuário em diante)",
     valor: 6,
-    unidade: "usuário/mês, por org",
-    fonte: FONTES.azurePrecos,
-  },
-  {
-    id: "azTestPlans",
-    plataforma: "Azure DevOps",
-    item: "Basic + Test Plans",
-    valor: 52,
     unidade: "usuário/mês, por org",
     fonte: FONTES.azurePrecos,
   },
@@ -180,6 +172,7 @@ export const PRECOS_OFICIAIS: Precos = Object.fromEntries(
 export const CAMBIO_PTAX_VENDA = 5.0096;
 export const BASIC_GRATIS_POR_ORG = 5;
 export const MINUTOS_GRATIS_MICROSOFT_POR_ORG = 1800;
+export const MINUTOS_POR_EXECUCAO_GRATIS = 60;
 export const JOBS_SELF_HOSTED_GRATIS_POR_ORG = 1;
 export const MINUTOS_INCLUIDOS_TEAM = 3000;
 export const MINUTOS_INCLUIDOS_ENTERPRISE = 50000;
@@ -190,6 +183,11 @@ export const MINUTOS_INCLUIDOS_ENTERPRISE = 50000;
  */
 export const MULTIPLICADOR_WINDOWS = 2;
 export const MULTIPLICADOR_MACOS = 10;
+
+/** O lado Azure DevOps é o cenário atual, fixo a preço oficial; só o GitHub aceita edição. */
+export function precoEditavel(ficha: FichaPreco): boolean {
+  return ficha.plataforma === "GitHub";
+}
 
 export function origemDoPreco(id: IdPreco, valor: number): "oficial" | "estimativa" {
   return valor === PRECOS_OFICIAIS[id] ? "oficial" : "estimativa";

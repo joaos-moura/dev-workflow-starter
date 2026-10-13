@@ -5,6 +5,7 @@ import {
   MINUTOS_GRATIS_MICROSOFT_POR_ORG,
   MINUTOS_INCLUIDOS_ENTERPRISE,
   MINUTOS_INCLUIDOS_TEAM,
+  MINUTOS_POR_EXECUCAO_GRATIS,
   MULTIPLICADOR_MACOS,
   MULTIPLICADOR_WINDOWS,
   PRECOS_OFICIAIS,
@@ -15,75 +16,62 @@ import {
 export type PlanoGitHub = "team" | "enterprise";
 export type RunnerGitHub = "linux-1" | "linux-2" | "linux-arm64" | "windows-2" | "macos";
 export type Moeda = "USD" | "BRL";
+export type TipoJobAzure = "microsoft-gratis" | "microsoft-pago" | "self-hosted-gratis";
 
 export type Entradas = {
   pessoas: number;
-  organizacoes: number;
-  pessoasCruzadas: number;
-  mediaOrgsCruzadas: number;
-  usuariosTestPlans: number;
-  testersCruzados: number;
-  stakeholders: number;
   minutosMes: number;
   percentualSelfHosted: number;
-  jobsMicrosoftPorOrg: number;
-  jobsSelfHostedPorOrg: number;
-  ghasGitHub: boolean;
-  ghazdo: boolean;
+  planoGitHub: PlanoGitHub;
+  runnerGitHub: RunnerGitHub;
+  ghas: boolean;
   codeSecurity: boolean;
   secretProtection: boolean;
   committersAtivos: number;
-  planoGitHub: PlanoGitHub;
-  runnerGitHub: RunnerGitHub;
   moeda: Moeda;
   cambio: number;
 };
 
 export type Premissas = {
-  cincoBasicGratis: boolean;
-  multiOrg: boolean;
-  mesmaAssinatura: boolean;
-  stakeholderGratis: boolean;
-  cotaGratisMicrosoftHosted: boolean;
-  testPlansEmUmaOrg: boolean;
   minutosIncluidosGitHub: boolean;
   multiplicadorDeSo: boolean;
-  stakeholdersNoGitHub: boolean;
+};
+
+/**
+ * Uso de hoje no Azure DevOps, sem campo editável. O tipo do job ainda precisa ser confirmado;
+ * o padrão é a cota grátis Microsoft-hosted, que a documentação dá a toda org com cobrança ligada.
+ */
+export const CENARIO_ATUAL_AZURE = {
+  organizacoes: 1,
+  pessoas: 20,
+  jobsParalelos: 1,
+  tipoJob: "microsoft-gratis",
+  ghazdo: false,
+} as const satisfies {
+  organizacoes: number;
+  pessoas: number;
+  jobsParalelos: number;
+  tipoJob: TipoJobAzure;
+  ghazdo: boolean;
 };
 
 export const ENTRADAS_PADRAO: Entradas = {
-  pessoas: 20,
-  organizacoes: 1,
-  pessoasCruzadas: 0,
-  mediaOrgsCruzadas: 2,
-  usuariosTestPlans: 0,
-  testersCruzados: 0,
-  stakeholders: 0,
-  minutosMes: 6000,
+  pessoas: CENARIO_ATUAL_AZURE.pessoas,
+  minutosMes: MINUTOS_GRATIS_MICROSOFT_POR_ORG,
   percentualSelfHosted: 0,
-  jobsMicrosoftPorOrg: 1,
-  jobsSelfHostedPorOrg: 0,
-  ghasGitHub: true,
-  ghazdo: false,
-  codeSecurity: true,
-  secretProtection: true,
-  committersAtivos: 20,
   planoGitHub: "team",
   runnerGitHub: "linux-2",
+  ghas: true,
+  codeSecurity: true,
+  secretProtection: true,
+  committersAtivos: CENARIO_ATUAL_AZURE.pessoas,
   moeda: "USD",
   cambio: CAMBIO_PTAX_VENDA,
 };
 
 export const PREMISSAS_PADRAO: Premissas = {
-  cincoBasicGratis: true,
-  multiOrg: false,
-  mesmaAssinatura: true,
-  stakeholderGratis: true,
-  cotaGratisMicrosoftHosted: true,
-  testPlansEmUmaOrg: true,
   minutosIncluidosGitHub: true,
   multiplicadorDeSo: false,
-  stakeholdersNoGitHub: true,
 };
 
 export type Linha = { rotulo: string; detalhe: string; usd: number };
@@ -94,8 +82,8 @@ export type Resultado = {
   anualUsd: number;
   porPessoaUsd: number;
   cadeirasPagas: number;
+  cadeirasGratis: number;
   pessoas: number;
-  cadeirasDuplicadas: number;
   avisos: readonly string[];
 };
 
@@ -111,34 +99,15 @@ function decimal(valor: number, minimo: number, maximo = Number.POSITIVE_INFINIT
   return Math.min(Math.max(numero, minimo), maximo);
 }
 
-/** Limita cada entrada ao que faz sentido junto com as outras. */
+/** Limita cada entrada ao que faz sentido; committer ativo também ocupa assento. */
 export function normalizar(entradas: Entradas): Entradas {
   const pessoas = inteiro(entradas.pessoas, 0);
-  const organizacoes = inteiro(entradas.organizacoes, 1);
-  const pessoasCruzadas = organizacoes > 1 ? inteiro(entradas.pessoasCruzadas, 0, pessoas) : 0;
-  const mediaOrgsCruzadas =
-    pessoasCruzadas > 0 ? decimal(entradas.mediaOrgsCruzadas, 1, organizacoes) : 1;
-  const usuariosTestPlans = inteiro(entradas.usuariosTestPlans, 0, pessoas);
-  const testersCruzados = inteiro(
-    entradas.testersCruzados,
-    0,
-    Math.min(usuariosTestPlans, pessoasCruzadas),
-  );
-
   return {
     ...entradas,
     pessoas,
-    organizacoes,
-    pessoasCruzadas,
-    mediaOrgsCruzadas,
-    usuariosTestPlans,
-    testersCruzados,
-    stakeholders: inteiro(entradas.stakeholders, 0),
     minutosMes: decimal(entradas.minutosMes, 0),
     percentualSelfHosted: decimal(entradas.percentualSelfHosted, 0, 100),
-    jobsMicrosoftPorOrg: inteiro(entradas.jobsMicrosoftPorOrg, 0),
-    jobsSelfHostedPorOrg: inteiro(entradas.jobsSelfHostedPorOrg, 0),
-    committersAtivos: inteiro(entradas.committersAtivos, 0),
+    committersAtivos: inteiro(entradas.committersAtivos, 0, pessoas),
     cambio: decimal(entradas.cambio, 0),
   };
 }
@@ -165,12 +134,39 @@ export function idDoPlano(plano: PlanoGitHub): IdPreco {
   }
 }
 
+export function nomeDoPlano(plano: PlanoGitHub): string {
+  switch (plano) {
+    case "team":
+      return "GitHub Team";
+    case "enterprise":
+      return "GitHub Enterprise";
+    default: {
+      const nunca: never = plano;
+      return nunca;
+    }
+  }
+}
+
 export function minutosIncluidos(plano: PlanoGitHub): number {
   switch (plano) {
     case "team":
       return MINUTOS_INCLUIDOS_TEAM;
     case "enterprise":
       return MINUTOS_INCLUIDOS_ENTERPRISE;
+    default: {
+      const nunca: never = plano;
+      return nunca;
+    }
+  }
+}
+
+/** Limites de jobs simultâneos em runner padrão hospedado pelo GitHub, por plano. */
+export function jobsSimultaneos(plano: PlanoGitHub): { total: number; macos: number } {
+  switch (plano) {
+    case "team":
+      return { total: 60, macos: 5 };
+    case "enterprise":
+      return { total: 500, macos: 50 };
     default: {
       const nunca: never = plano;
       return nunca;
@@ -214,11 +210,57 @@ export function multiplicador(runner: RunnerGitHub): number {
   }
 }
 
+export type Capacidade = { titulo: string; detalhe: string };
+
+export function capacidadeGitHub(plano: PlanoGitHub, runner: RunnerGitHub): Capacidade {
+  const { total, macos } = jobsSimultaneos(plano);
+  const detalhe =
+    runner === "macos"
+      ? `${nomeDoPlano(plano)}, runner padrão; macOS limitado a ${macos} simultâneos.`
+      : `${nomeDoPlano(plano)}, runner padrão hospedado pelo GitHub.`;
+  return {
+    titulo: `${fmt(minutosIncluidos(plano))} minutos inclusos + ${total} jobs simultâneos`,
+    detalhe,
+  };
+}
+
+export const CAPACIDADE_AZURE_ATUAL: Capacidade = {
+  titulo: "1 job, fila única",
+  detalhe: "Um build por vez; os outros esperam na fila da org.",
+};
+
+export function linhaDoJob(tipo: TipoJobAzure, precos: Precos = PRECOS_OFICIAIS): Linha {
+  switch (tipo) {
+    case "microsoft-gratis":
+      return {
+        rotulo: "1 job paralelo · grátis",
+        detalhe: `Microsoft-hosted, cota grátis: ${MINUTOS_POR_EXECUCAO_GRATIS} min por execução, ${fmt(MINUTOS_GRATIS_MICROSOFT_POR_ORG)} min/mês`,
+        usd: 0,
+      };
+    case "microsoft-pago":
+      return {
+        rotulo: "1 job paralelo · pago",
+        detalhe: `Microsoft-hosted, minutos ilimitados × ${dolar(precos.azJobMicrosoft)}`,
+        usd: precos.azJobMicrosoft,
+      };
+    case "self-hosted-gratis":
+      return {
+        rotulo: "1 job paralelo · grátis",
+        detalhe: `Self-hosted, ${JOBS_SELF_HOSTED_GRATIS_POR_ORG} job grátis por org, sem limite de minutos`,
+        usd: 0,
+      };
+    default: {
+      const nunca: never = tipo;
+      return nunca;
+    }
+  }
+}
+
 function fechar(
   linhas: Linha[],
   cadeirasPagas: number,
+  cadeirasGratis: number,
   pessoas: number,
-  cadeirasDuplicadas: number,
   avisos: string[],
 ): Resultado {
   const mensalUsd = linhas.reduce((soma, linha) => soma + linha.usd, 0);
@@ -228,154 +270,29 @@ function fechar(
     anualUsd: mensalUsd * 12,
     porPessoaUsd: pessoas > 0 ? mensalUsd / pessoas : 0,
     cadeirasPagas,
+    cadeirasGratis,
     pessoas,
-    cadeirasDuplicadas,
     avisos,
   };
 }
 
-function minutosHospedados(entradas: Entradas) {
-  return entradas.minutosMes * (1 - entradas.percentualSelfHosted / 100);
-}
-
-function custoSeguranca(
-  ligado: boolean,
-  entradas: Entradas,
-  committers: number,
-  idCode: IdPreco,
-  idSecret: IdPreco,
-  precos: Precos,
-): Linha[] {
-  if (!ligado) return [];
-  const linhas: Linha[] = [];
-  if (entradas.codeSecurity) {
-    linhas.push({
-      rotulo: "Code Security",
-      detalhe: `${committers} committers × ${dolar(precos[idCode])}`,
-      usd: committers * precos[idCode],
-    });
-  }
-  if (entradas.secretProtection) {
-    linhas.push({
-      rotulo: "Secret Protection",
-      detalhe: `${committers} committers × ${dolar(precos[idSecret])}`,
-      usd: committers * precos[idSecret],
-    });
-  }
-  return linhas;
-}
-
-export function calcularAzure(
-  bruto: Entradas,
-  premissas: Premissas,
-  precosBrutos: Precos = PRECOS_OFICIAIS,
+export function calcularAzureAtual(
+  tipoJob: TipoJobAzure = CENARIO_ATUAL_AZURE.tipoJob,
+  precos: Precos = PRECOS_OFICIAIS,
 ): Resultado {
-  const e = normalizar(bruto);
-  const precos = normalizarPrecos(precosBrutos);
-  const avisos: string[] = [];
-  const multiOrg = premissas.multiOrg && premissas.mesmaAssinatura;
-  if (premissas.multiOrg && !premissas.mesmaAssinatura) {
-    avisos.push(
-      "Multi-org billing só junta orgs da mesma assinatura Azure; a conta segue por org.",
-    );
-  }
-
-  const exclusivas = e.pessoas - e.pessoasCruzadas;
-  const atribuicoes = exclusivas + e.pessoasCruzadas * e.mediaOrgsCruzadas;
-  const atribuicoesTestPlans =
-    e.usuariosTestPlans - e.testersCruzados + e.testersCruzados * e.mediaOrgsCruzadas;
-
-  let assentosTestPlans: number;
-  let assentosBasic: number;
-  if (multiOrg) {
-    assentosTestPlans = e.usuariosTestPlans;
-    const basicExtraDeTesters = premissas.testPlansEmUmaOrg ? e.testersCruzados : 0;
-    assentosBasic = e.pessoas - e.usuariosTestPlans + basicExtraDeTesters;
-    if (basicExtraDeTesters > 0) {
-      avisos.push(
-        `${basicExtraDeTesters} tester(s) com Basic + Test Plans numa org e Basic noutra pagam os dois.`,
-      );
-    }
-  } else {
-    assentosTestPlans = atribuicoesTestPlans;
-    assentosBasic = atribuicoes - atribuicoesTestPlans;
-  }
-
-  const stakeholdersPagos = premissas.stakeholderGratis ? 0 : e.stakeholders;
-  const basicCobravel = assentosBasic + stakeholdersPagos;
-  const cotaGratis = premissas.cincoBasicGratis
-    ? BASIC_GRATIS_POR_ORG * (multiOrg ? 1 : e.organizacoes)
-    : 0;
-  const gratis = Math.min(basicCobravel, cotaGratis);
-  const basicPagos = basicCobravel - gratis;
-
+  const { pessoas, organizacoes } = CENARIO_ATUAL_AZURE;
+  const gratis = Math.min(pessoas, BASIC_GRATIS_POR_ORG * organizacoes);
+  const pagas = pessoas - gratis;
   const linhas: Linha[] = [
     {
-      rotulo: "Basic",
-      detalhe: `${fmt(basicCobravel)} assentos − ${gratis} grátis × ${dolar(precos.azBasic)}`,
-      usd: basicPagos * precos.azBasic,
+      rotulo: `Basic · ${pagas} pagos, ${gratis} grátis`,
+      detalhe: `${pessoas} assentos − ${gratis} grátis × ${dolar(precos.azBasic)}`,
+      usd: pagas * precos.azBasic,
     },
+    linhaDoJob(tipoJob, precos),
+    { rotulo: "GHAzDO", detalhe: "Não usado hoje", usd: 0 },
   ];
-  if (assentosTestPlans > 0) {
-    linhas.push({
-      rotulo: "Basic + Test Plans",
-      detalhe: `${fmt(assentosTestPlans)} assentos × ${dolar(precos.azTestPlans)}`,
-      usd: assentosTestPlans * precos.azTestPlans,
-    });
-  }
-
-  const minutosPorOrg = minutosHospedados(e) / e.organizacoes;
-  let jobsMicrosoftPagos = e.jobsMicrosoftPorOrg;
-  if (minutosPorOrg > 0 && jobsMicrosoftPagos === 0) {
-    jobsMicrosoftPagos = 1;
-  }
-  const cotaCobre =
-    premissas.cotaGratisMicrosoftHosted &&
-    jobsMicrosoftPagos <= 1 &&
-    minutosPorOrg <= MINUTOS_GRATIS_MICROSOFT_POR_ORG;
-  if (cotaCobre) {
-    jobsMicrosoftPagos = 0;
-  } else if (
-    premissas.cotaGratisMicrosoftHosted &&
-    minutosPorOrg > MINUTOS_GRATIS_MICROSOFT_POR_ORG &&
-    e.jobsMicrosoftPorOrg <= 1
-  ) {
-    avisos.push(
-      `${fmt(minutosPorOrg)} min/mês por org passam da cota grátis de ${fmt(MINUTOS_GRATIS_MICROSOFT_POR_ORG)}: 1 job pago por org.`,
-    );
-  }
-  const jobsSelfHostedPagos = Math.max(0, e.jobsSelfHostedPorOrg - JOBS_SELF_HOSTED_GRATIS_POR_ORG);
-
-  if (jobsMicrosoftPagos > 0) {
-    linhas.push({
-      rotulo: "Jobs Microsoft-hosted",
-      detalhe: `${e.organizacoes} org × ${jobsMicrosoftPagos} job × ${dolar(precos.azJobMicrosoft)}`,
-      usd: e.organizacoes * jobsMicrosoftPagos * precos.azJobMicrosoft,
-    });
-  }
-  if (jobsSelfHostedPagos > 0) {
-    linhas.push({
-      rotulo: "Jobs self-hosted",
-      detalhe: `${e.organizacoes} org × ${jobsSelfHostedPagos} job extra × ${dolar(precos.azJobSelfHosted)}`,
-      usd: e.organizacoes * jobsSelfHostedPagos * precos.azJobSelfHosted,
-    });
-  }
-
-  const committersCruzados = Math.min(e.pessoasCruzadas, e.committersAtivos);
-  const committers = premissas.mesmaAssinatura
-    ? e.committersAtivos
-    : e.committersAtivos + committersCruzados * (e.mediaOrgsCruzadas - 1);
-  linhas.push(
-    ...custoSeguranca(e.ghazdo, e, committers, "azCodeSecurity", "azSecretProtection", precos).map(
-      (linha) => ({ ...linha, rotulo: `GHAzDO ${linha.rotulo}` }),
-    ),
-  );
-
-  const cadeirasPagas = basicPagos + assentosTestPlans;
-  const cadeirasDuplicadas = multiOrg
-    ? assentosBasic + assentosTestPlans - e.pessoas
-    : atribuicoes - e.pessoas;
-  return fechar(linhas, cadeirasPagas, e.pessoas + stakeholdersPagos, cadeirasDuplicadas, avisos);
+  return fechar(linhas, pagas, gratis, pessoas, []);
 }
 
 export function calcularGitHub(
@@ -389,22 +306,21 @@ export function calcularGitHub(
   const idPlano = idDoPlano(e.planoGitHub);
   const idRunner = idDoRunner(e.runnerGitHub);
 
-  const usuarios = e.pessoas + (premissas.stakeholdersNoGitHub ? e.stakeholders : 0);
   const linhas: Linha[] = [
     {
-      rotulo: e.planoGitHub === "team" ? "GitHub Team" : "GitHub Enterprise",
-      detalhe: `${usuarios} usuários × ${dolar(precos[idPlano])}`,
-      usd: usuarios * precos[idPlano],
+      rotulo: nomeDoPlano(e.planoGitHub),
+      detalhe: `${e.pessoas} usuários × ${dolar(precos[idPlano])}`,
+      usd: e.pessoas * precos[idPlano],
     },
   ];
 
-  const minutos = minutosHospedados(e);
+  const minutos = e.minutosMes * (1 - e.percentualSelfHosted / 100);
   const fator = premissas.multiplicadorDeSo ? multiplicador(e.runnerGitHub) : 1;
   const incluidos = premissas.minutosIncluidosGitHub ? minutosIncluidos(e.planoGitHub) / fator : 0;
   const excedente = Math.max(0, minutos - incluidos);
   linhas.push({
     rotulo: "Actions (minutos hospedados)",
-    detalhe: `${fmt(excedente)} min além de ${fmt(incluidos)} incluídos × ${dolar(precos[idRunner])}`,
+    detalhe: `${fmt(minutos)} min usados, ${fmt(incluidos)} incluídos, ${fmt(excedente)} excedentes × ${dolar(precos[idRunner])}`,
     usd: excedente * precos[idRunner],
   });
   if (e.percentualSelfHosted > 0) {
@@ -413,23 +329,29 @@ export function calcularGitHub(
     );
   }
 
-  linhas.push(
-    ...custoSeguranca(
-      e.ghasGitHub,
-      e,
-      e.committersAtivos,
-      "ghCodeSecurity",
-      "ghSecretProtection",
-      precos,
-    ),
-  );
-  if (!e.ghasGitHub) {
+  if (e.ghas) {
+    const committers = e.committersAtivos;
+    if (e.codeSecurity) {
+      linhas.push({
+        rotulo: "Code Security",
+        detalhe: `${committers} committers ativos × ${dolar(precos.ghCodeSecurity)}`,
+        usd: committers * precos.ghCodeSecurity,
+      });
+    }
+    if (e.secretProtection) {
+      linhas.push({
+        rotulo: "Secret Protection",
+        detalhe: `${committers} committers ativos × ${dolar(precos.ghSecretProtection)}`,
+        usd: committers * precos.ghSecretProtection,
+      });
+    }
+  } else {
     avisos.push(
       "Sem GHAS, CodeQL em repositório privado não roda; gates abertos no Actions custam só minutos.",
     );
   }
 
-  return fechar(linhas, usuarios, usuarios, 0, avisos);
+  return fechar(linhas, e.pessoas, 0, e.pessoas, avisos);
 }
 
 export function comparar(
@@ -438,7 +360,7 @@ export function comparar(
   precos: Precos = PRECOS_OFICIAIS,
 ): Comparacao {
   return {
-    azure: calcularAzure(entradas, premissas, precos),
+    azure: calcularAzureAtual(),
     github: calcularGitHub(entradas, premissas, precos),
   };
 }

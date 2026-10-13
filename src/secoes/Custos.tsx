@@ -1,10 +1,13 @@
 import { useId, useState } from "react";
 import { Revelar } from "../componentes/Revelar";
 import { Secao } from "../componentes/Secao";
-import { CampoNumero, Escolha, Interruptor } from "../calculadora/Campos";
+import { CampoNumero, Cita, Escolha, Interruptor } from "../calculadora/Campos";
 import {
+  CAPACIDADE_AZURE_ATUAL,
+  CENARIO_ATUAL_AZURE,
   ENTRADAS_PADRAO,
   PREMISSAS_PADRAO,
+  capacidadeGitHub,
   comparar,
   converter,
   formatarMoeda,
@@ -17,13 +20,14 @@ import {
   type Resultado,
   type RunnerGitHub,
 } from "../calculadora/calculo";
-import { FICHAS_PREMISSAS } from "../calculadora/premissas";
+import { CITACOES, FICHAS_PREMISSAS } from "../calculadora/premissas";
 import {
   FICHAS,
   FONTES,
   PRECOS_OFICIAIS,
   VERIFICADO_EM,
   origemDoPreco,
+  precoEditavel,
   type IdPreco,
   type Precos,
 } from "../calculadora/precos";
@@ -69,13 +73,7 @@ function Painel({ nome, classe, resultado, moeda, cambio }: PropriedadesPainel) 
       </p>
       <p className="cadeiras">
         {frasesDeCadeiras(resultado)}
-        {resultado.cadeirasDuplicadas > 0 && (
-          <em>
-            {" "}
-            · +{new Intl.NumberFormat("pt-BR").format(resultado.cadeirasDuplicadas)} por acesso
-            cruzado
-          </em>
-        )}
+        {resultado.cadeirasGratis > 0 && ` · ${resultado.cadeirasGratis} grátis`}
       </p>
       <ul className="linhas">
         {resultado.linhas.map((linha) => (
@@ -99,6 +97,65 @@ function Painel({ nome, classe, resultado, moeda, cambio }: PropriedadesPainel) 
   );
 }
 
+function CenarioAtualAzure() {
+  return (
+    <div className="fixo" role="group" aria-label="Azure DevOps · Cenário atual">
+      <h3>
+        Azure DevOps · Cenário atual <span className="selo">fixo</span>
+      </h3>
+      <p className="note">O uso de hoje, a preço oficial. Não há campo para editar.</p>
+      <dl>
+        <div>
+          <dt>Organizações</dt>
+          <dd>{CENARIO_ATUAL_AZURE.organizacoes}</dd>
+        </div>
+        <div>
+          <dt>Pessoas (Basic)</dt>
+          <dd>{CENARIO_ATUAL_AZURE.pessoas}</dd>
+        </div>
+        <div>
+          <dt>Jobs paralelos</dt>
+          <dd>{CENARIO_ATUAL_AZURE.jobsParalelos}</dd>
+        </div>
+        <div>
+          <dt>GHAzDO</dt>
+          <dd>não usado</dd>
+        </div>
+      </dl>
+
+      <h4>O que é grátis e o que é pago</h4>
+      <ul className="gratis">
+        <li>
+          <b>Basic:</b> 5 grátis por org; do 6º usuário em diante, US$ 6/mês.
+          <Cita {...CITACOES.basicGratis} />
+        </li>
+        <li>
+          <b>Job Microsoft-hosted:</b> 1 grátis, com limite de 1.800 min/mês e 60 min por execução;
+          pago custa US$ 40/mês, sem limite de minutos.
+          <Cita {...CITACOES.jobMicrosoftGratis} />
+        </li>
+        <li>
+          <b>Job self-hosted:</b> 1 grátis, sem limite de minutos; extra custa US$ 15/mês.
+          <Cita {...CITACOES.jobSelfHostedGratis} />
+        </li>
+      </ul>
+      <p className="note">
+        A conta usa o job como Microsoft-hosted grátis, a cota que toda org recebe ao ligar a
+        cobrança. Falta confirmar se o job de hoje é esse, um pago (+US$ 40/mês) ou self-hosted.
+      </p>
+
+      <h4>Cobrança por org</h4>
+      <p className="note">
+        O Azure DevOps cobra por organização: cada org tem os próprios 5 Basic grátis e cobra quem
+        está nela. Com mais de uma org, existe o multi-org billing, que cobra cada pessoa uma vez
+        entre orgs da mesma assinatura Azure. Com uma org só, não muda nada.
+      </p>
+      <Cita {...CITACOES.porOrg} />
+      <Cita {...CITACOES.multiOrg} />
+    </div>
+  );
+}
+
 export function Custos() {
   const [entradas, setEntradas] = useState<Entradas>(ENTRADAS_PADRAO);
   const [premissas, setPremissas] = useState<Premissas>(PREMISSAS_PADRAO);
@@ -109,6 +166,12 @@ export function Custos() {
     <K extends keyof Entradas>(chave: K) =>
     (valor: Entradas[K]) =>
       setEntradas((atual) => ({ ...atual, [chave]: valor }));
+  const mudarPessoas = (pessoas: number) =>
+    setEntradas((atual) => ({
+      ...atual,
+      pessoas,
+      committersAtivos: atual.committersAtivos === atual.pessoas ? pessoas : atual.committersAtivos,
+    }));
   const mudarPremissa = (chave: keyof Premissas) => (ligado: boolean) =>
     setPremissas((atual) => ({ ...atual, [chave]: ligado }));
   const mudarPreco = (id: IdPreco) => (valor: number) =>
@@ -116,9 +179,8 @@ export function Custos() {
 
   const normal = normalizar(entradas);
   const { azure, github } = comparar(entradas, premissas, precos);
+  const capacidade = capacidadeGitHub(normal.planoGitHub, normal.runnerGitHub);
   const maior = Math.max(azure.mensalUsd, github.mensalUsd, 1);
-  const varias = normal.organizacoes > 1;
-  const algumGhas = entradas.ghasGitHub || entradas.ghazdo;
   const valor = (usd: number) =>
     formatarMoeda(converter(usd, normal.moeda, normal.cambio), normal.moeda);
 
@@ -130,181 +192,149 @@ export function Custos() {
       titulo="Quanto custa cada caminho."
       sub={
         <>
-          Azure DevOps por organização contra GitHub com Actions, por pessoa. Preços públicos
-          oficiais, verificados em {VERIFICADO_EM}. Todo campo é editável.
+          O Azure DevOps de hoje, fixo, contra o GitHub com Actions, que você configura. Preços
+          públicos oficiais, verificados em {VERIFICADO_EM}.
         </>
       }
     >
+      <Revelar className="capacidade">
+        <article className="cap az" aria-label="Capacidade do Azure DevOps">
+          <small>Pipeline · Azure DevOps hoje</small>
+          <b>{CAPACIDADE_AZURE_ATUAL.titulo}</b>
+          <p>{CAPACIDADE_AZURE_ATUAL.detalhe}</p>
+          <Cita {...CITACOES.filaUnica} />
+        </article>
+        <article className="cap gh" aria-label="Capacidade do GitHub">
+          <small>Pipeline · GitHub no plano escolhido</small>
+          <b data-testid="capacidade-gh">{capacidade.titulo}</b>
+          <p>{capacidade.detalhe}</p>
+          <Cita {...CITACOES.minutosGitHub} />
+          <Cita {...CITACOES.jobsGitHub} />
+        </article>
+      </Revelar>
+
       <Revelar className="calc">
-        <form
-          className="calc-form"
-          aria-label="Entradas"
-          onSubmit={(evento) => evento.preventDefault()}
-        >
-          <fieldset>
-            <legend>Pessoas e organizações</legend>
-            <CampoNumero
-              rotulo="Pessoas (devs)"
-              valor={entradas.pessoas}
-              aoMudar={mudar("pessoas")}
-              dica="Total de pessoas distintas, somando todas as orgs."
-            />
-            <CampoNumero
-              rotulo="Organizações Azure DevOps"
-              valor={entradas.organizacoes}
-              aoMudar={mudar("organizacoes")}
-              min={1}
-            />
-            <CampoNumero
-              rotulo="Devs com acesso cruzado"
-              valor={entradas.pessoasCruzadas}
-              aoMudar={mudar("pessoasCruzadas")}
-              max={normal.pessoas}
-              desligado={!varias}
-              dica={
-                varias ? "Entram em mais de uma org." : "Com uma org só, não há acesso cruzado."
-              }
-            />
-            <CampoNumero
-              rotulo="Média de orgs por dev cruzado"
-              valor={entradas.mediaOrgsCruzadas}
-              aoMudar={mudar("mediaOrgsCruzadas")}
-              min={1}
-              max={normal.organizacoes}
-              passo={0.5}
-              desligado={!varias}
-            />
-            <CampoNumero
-              rotulo="Usuários com Test Plans"
-              valor={entradas.usuariosTestPlans}
-              aoMudar={mudar("usuariosTestPlans")}
-              max={normal.pessoas}
-            />
-            <CampoNumero
-              rotulo="Desses, com acesso cruzado"
-              valor={entradas.testersCruzados}
-              aoMudar={mudar("testersCruzados")}
-              desligado={!varias}
-            />
-            <CampoNumero
-              rotulo="Stakeholders"
-              valor={entradas.stakeholders}
-              aoMudar={mudar("stakeholders")}
-              dica="Fora da conta de devs."
-            />
-          </fieldset>
+        <div className="calc-form">
+          <CenarioAtualAzure />
 
-          <fieldset>
-            <legend>Pipelines</legend>
-            <CampoNumero
-              rotulo="Minutos de pipeline por mês"
-              valor={entradas.minutosMes}
-              aoMudar={mudar("minutosMes")}
-              passo={500}
-              dica="Total de todas as orgs; valor de exemplo."
-            />
-            <CampoNumero
-              rotulo="% dos minutos em self-hosted"
-              valor={entradas.percentualSelfHosted}
-              aoMudar={mudar("percentualSelfHosted")}
-              max={100}
-              passo={10}
-            />
-            <CampoNumero
-              rotulo="Jobs paralelos Microsoft-hosted por org"
-              valor={entradas.jobsMicrosoftPorOrg}
-              aoMudar={mudar("jobsMicrosoftPorOrg")}
-            />
-            <CampoNumero
-              rotulo="Jobs paralelos self-hosted por org"
-              valor={entradas.jobsSelfHostedPorOrg}
-              aoMudar={mudar("jobsSelfHostedPorOrg")}
-              dica="O primeiro é grátis."
-            />
-            <div className="campo">
-              <label htmlFor={idRunner}>Runner hospedado do GitHub</label>
-              <select
-                id={idRunner}
-                value={entradas.runnerGitHub}
-                onChange={(evento) => mudar("runnerGitHub")(evento.target.value as RunnerGitHub)}
-              >
-                {RUNNERS.map((runner) => (
-                  <option key={runner.valor} value={runner.valor}>
-                    {runner.rotulo}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </fieldset>
+          <form
+            className="calc-campos"
+            aria-label="GitHub"
+            onSubmit={(evento) => evento.preventDefault()}
+          >
+            <fieldset>
+              <legend>GitHub</legend>
+              <CampoNumero
+                rotulo="Pessoas (devs)"
+                valor={entradas.pessoas}
+                aoMudar={mudarPessoas}
+                dica="Total de pessoas, o mesmo grupo do Azure DevOps."
+              />
+              <Escolha
+                rotulo="Plano GitHub"
+                valor={entradas.planoGitHub}
+                opcoes={PLANOS}
+                aoMudar={mudar("planoGitHub")}
+              />
+              <CampoNumero
+                rotulo="Minutos de pipeline por mês"
+                valor={entradas.minutosMes}
+                aoMudar={mudar("minutosMes")}
+                passo={100}
+                dica="Começa no teto da cota grátis do job de hoje."
+              />
+              <CampoNumero
+                rotulo="% dos minutos em self-hosted"
+                valor={entradas.percentualSelfHosted}
+                aoMudar={mudar("percentualSelfHosted")}
+                max={100}
+                passo={10}
+              />
+              <div className="campo">
+                <label htmlFor={idRunner}>Runner hospedado</label>
+                <select
+                  id={idRunner}
+                  value={entradas.runnerGitHub}
+                  onChange={(evento) => mudar("runnerGitHub")(evento.target.value as RunnerGitHub)}
+                >
+                  {RUNNERS.map((runner) => (
+                    <option key={runner.valor} value={runner.valor}>
+                      {runner.rotulo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {FICHAS_PREMISSAS.map((ficha) => (
+                <Interruptor
+                  key={ficha.chave}
+                  rotulo={ficha.rotulo}
+                  ligado={premissas[ficha.chave]}
+                  aoMudar={mudarPremissa(ficha.chave)}
+                >
+                  <small>
+                    {ficha.texto}{" "}
+                    <a href={ficha.fonte} target="_blank" rel="noreferrer">
+                      Fonte
+                    </a>
+                    {ficha.estimativa && <span className="selo est">estimativa</span>}
+                  </small>
+                </Interruptor>
+              ))}
+            </fieldset>
 
-          <fieldset>
-            <legend>GitHub e segurança</legend>
-            <Escolha
-              rotulo="Plano GitHub"
-              valor={entradas.planoGitHub}
-              opcoes={PLANOS}
-              aoMudar={mudar("planoGitHub")}
-            />
-            <Interruptor
-              rotulo="GHAS no GitHub"
-              ligado={entradas.ghasGitHub}
-              aoMudar={mudar("ghasGitHub")}
-            >
-              <small>Ligado por padrão: a segurança roda no pipeline do GitHub.</small>
-            </Interruptor>
-            <Interruptor
-              rotulo="GHAzDO no Azure DevOps"
-              ligado={entradas.ghazdo}
-              aoMudar={mudar("ghazdo")}
-            >
-              <small>Desligado por padrão: o uso atual do Azure DevOps não tem GHAzDO.</small>
-            </Interruptor>
-            <Interruptor
-              rotulo="Code Security"
-              ligado={entradas.codeSecurity}
-              aoMudar={mudar("codeSecurity")}
-              desligado={!algumGhas}
-            />
-            <Interruptor
-              rotulo="Secret Protection"
-              ligado={entradas.secretProtection}
-              aoMudar={mudar("secretProtection")}
-              desligado={!algumGhas}
-            />
-            <CampoNumero
-              rotulo="Committers ativos (90 dias)"
-              valor={entradas.committersAtivos}
-              aoMudar={mudar("committersAtivos")}
-              desligado={!algumGhas}
-              dica="Começa igual ao número de pessoas: todo dev commita."
-            />
-          </fieldset>
+            <fieldset>
+              <legend>Segurança no GitHub</legend>
+              <Interruptor rotulo="GHAS ligado" ligado={entradas.ghas} aoMudar={mudar("ghas")}>
+                <small>A segurança roda no pipeline, cobrada por committer ativo.</small>
+              </Interruptor>
+              <Interruptor
+                rotulo="Code Security"
+                ligado={entradas.codeSecurity}
+                aoMudar={mudar("codeSecurity")}
+                desligado={!entradas.ghas}
+              />
+              <Interruptor
+                rotulo="Secret Protection"
+                ligado={entradas.secretProtection}
+                aoMudar={mudar("secretProtection")}
+                desligado={!entradas.ghas}
+              />
+              <CampoNumero
+                rotulo="Committers ativos (90 dias)"
+                valor={entradas.committersAtivos}
+                aoMudar={mudar("committersAtivos")}
+                max={normal.pessoas}
+                desligado={!entradas.ghas}
+                dica="Começa igual ao número de pessoas e acompanha esse campo até ser editado."
+              />
+            </fieldset>
 
-          <fieldset>
-            <legend>Moeda</legend>
-            <Escolha
-              rotulo="Mostrar em"
-              valor={entradas.moeda}
-              opcoes={MOEDAS}
-              aoMudar={mudar("moeda")}
-            />
-            <CampoNumero
-              rotulo="Câmbio (R$ por US$)"
-              valor={entradas.cambio}
-              aoMudar={mudar("cambio")}
-              passo={0.01}
-              dica={
-                <>
-                  PTAX venda de {VERIFICADO_EM},{" "}
-                  <a href={FONTES.ptax} target="_blank" rel="noreferrer">
-                    Banco Central
-                  </a>
-                  .
-                </>
-              }
-            />
-          </fieldset>
-        </form>
+            <fieldset>
+              <legend>Moeda</legend>
+              <Escolha
+                rotulo="Mostrar em"
+                valor={entradas.moeda}
+                opcoes={MOEDAS}
+                aoMudar={mudar("moeda")}
+              />
+              <CampoNumero
+                rotulo="Câmbio (R$ por US$)"
+                valor={entradas.cambio}
+                aoMudar={mudar("cambio")}
+                passo={0.01}
+                dica={
+                  <>
+                    PTAX venda de {VERIFICADO_EM},{" "}
+                    <a href={FONTES.ptax} target="_blank" rel="noreferrer">
+                      Banco Central
+                    </a>
+                    .
+                  </>
+                }
+              />
+            </fieldset>
+          </form>
+        </div>
 
         <div className="calc-res" aria-live="polite">
           <div className="barras" role="img" aria-label="Total mensal de cada caminho">
@@ -320,7 +350,7 @@ export function Custos() {
             </div>
           </div>
           <Painel
-            nome="Azure DevOps"
+            nome="Azure DevOps · Cenário atual"
             classe="az"
             resultado={azure}
             moeda={normal.moeda}
@@ -333,29 +363,6 @@ export function Custos() {
             moeda={normal.moeda}
             cambio={normal.cambio}
           />
-        </div>
-      </Revelar>
-
-      <Revelar className="premissas">
-        <h3>Premissas</h3>
-        <p className="note">Cada uma começa no padrão oficial. Mude para testar o seu cenário.</p>
-        <div className="lista-premissas">
-          {FICHAS_PREMISSAS.map((ficha) => (
-            <Interruptor
-              key={ficha.chave}
-              rotulo={ficha.rotulo}
-              ligado={premissas[ficha.chave]}
-              aoMudar={mudarPremissa(ficha.chave)}
-            >
-              <small>
-                {ficha.texto}{" "}
-                <a href={ficha.fonte} target="_blank" rel="noreferrer">
-                  Fonte
-                </a>
-                {ficha.estimativa && <span className="selo est">estimativa</span>}
-              </small>
-            </Interruptor>
-          ))}
         </div>
       </Revelar>
 
@@ -372,7 +379,9 @@ export function Custos() {
           </thead>
           <tbody>
             {FICHAS.map((ficha) => {
-              const origem = origemDoPreco(ficha.id, precos[ficha.id]);
+              const editavel = precoEditavel(ficha);
+              const atual = editavel ? precos[ficha.id] : PRECOS_OFICIAIS[ficha.id];
+              const origem = origemDoPreco(ficha.id, atual);
               return (
                 <tr key={ficha.id}>
                   <th scope="row">
@@ -380,18 +389,23 @@ export function Custos() {
                     <small>{ficha.plataforma}</small>
                   </th>
                   <td>
-                    <input
-                      type="number"
-                      aria-label={`Preço de ${ficha.item}`}
-                      min={0}
-                      step="any"
-                      value={Number.isFinite(precos[ficha.id]) ? precos[ficha.id] : ""}
-                      onChange={(evento) => mudarPreco(ficha.id)(evento.target.valueAsNumber)}
-                    />
+                    {editavel ? (
+                      <input
+                        type="number"
+                        aria-label={`Preço de ${ficha.item}`}
+                        min={0}
+                        step="any"
+                        value={Number.isFinite(atual) ? atual : ""}
+                        onChange={(evento) => mudarPreco(ficha.id)(evento.target.valueAsNumber)}
+                      />
+                    ) : (
+                      <span className="fixo-valor">{atual}</span>
+                    )}
                   </td>
                   <td>{ficha.unidade}</td>
                   <td>
-                    <span className={origem === "oficial" ? "selo ok" : "selo est"}>{origem}</span>{" "}
+                    <span className={origem === "oficial" ? "selo ok" : "selo est"}>{origem}</span>
+                    {!editavel && <span className="selo">fixo</span>}{" "}
                     <a href={ficha.fonte} target="_blank" rel="noreferrer">
                       {new URL(ficha.fonte).hostname}
                     </a>
@@ -403,8 +417,8 @@ export function Custos() {
         </table>
       </Revelar>
       <p className="note">
-        Preço editado vira estimativa. Fora da conta: Artifacts acima de 2 GiB, storage do Actions,
-        plano antigo por minuto e assinaturas Visual Studio.
+        Preço do GitHub editado vira estimativa. Fora da conta: Artifacts acima de 2 GiB, storage do
+        Actions, plano antigo por minuto e assinaturas Visual Studio.
       </p>
     </Secao>
   );

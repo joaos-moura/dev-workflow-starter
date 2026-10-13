@@ -109,3 +109,16 @@ export function Escolha<T extends string>({
     </fieldset>
   );
 }
+
+type PropriedadesCita = { texto: string; fonte: string };
+
+export function Cita({ texto, fonte }: PropriedadesCita) {
+  return (
+    <blockquote className="cita" cite={fonte}>
+      <p>“{texto}”</p>
+      <a href={fonte} target="_blank" rel="noreferrer">
+        {new URL(fonte).hostname}
+      </a>
+    </blockquote>
+  );
+}

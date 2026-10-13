@@ -1,18 +1,33 @@
 import { describe, expect, it } from "vitest";
 import {
+  CAPACIDADE_AZURE_ATUAL,
+  CENARIO_ATUAL_AZURE,
   ENTRADAS_PADRAO,
   PREMISSAS_PADRAO,
-  calcularAzure,
+  calcularAzureAtual,
   calcularGitHub,
+  capacidadeGitHub,
   comparar,
   converter,
   formatarMoeda,
   frasesDeCadeiras,
+  jobsSimultaneos,
+  linhaDoJob,
+  minutosIncluidos,
   normalizar,
   type Entradas,
   type Premissas,
+  type Resultado,
 } from "./calculo";
-import { FICHAS, PRECOS_OFICIAIS, VERIFICADO_EM, origemDoPreco } from "./precos";
+import { CITACOES } from "./premissas";
+import {
+  FICHAS,
+  FONTES,
+  PRECOS_OFICIAIS,
+  VERIFICADO_EM,
+  origemDoPreco,
+  precoEditavel,
+} from "./precos";
 
 function entradas(parcial: Partial<Entradas> = {}): Entradas {
   return { ...ENTRADAS_PADRAO, ...parcial };
@@ -22,227 +37,122 @@ function premissas(parcial: Partial<Premissas> = {}): Premissas {
   return { ...PREMISSAS_PADRAO, ...parcial };
 }
 
-function linha(resultado: ReturnType<typeof calcularAzure>, rotulo: string) {
-  return resultado.linhas.find((item) => item.rotulo === rotulo)?.usd ?? 0;
+function linha(resultado: Resultado, inicio: string) {
+  return resultado.linhas.find((item) => item.rotulo.startsWith(inicio))?.usd ?? 0;
 }
 
-describe("cenário inicial", () => {
-  it("parte de uma org com 20 pessoas, sem acesso cruzado", () => {
-    expect(ENTRADAS_PADRAO.pessoas).toBe(20);
-    expect(ENTRADAS_PADRAO.organizacoes).toBe(1);
-    expect(ENTRADAS_PADRAO.pessoasCruzadas).toBe(0);
-    expect(PREMISSAS_PADRAO.multiOrg).toBe(false);
-    expect(PREMISSAS_PADRAO.cincoBasicGratis).toBe(true);
+describe("Azure DevOps · cenário atual (fixo)", () => {
+  it("é 1 org, 20 pessoas, 1 job paralelo e sem GHAzDO", () => {
+    expect(CENARIO_ATUAL_AZURE).toEqual({
+      organizacoes: 1,
+      pessoas: 20,
+      jobsParalelos: 1,
+      tipoJob: "microsoft-gratis",
+      ghazdo: false,
+    });
   });
 
-  it("liga GHAS só no GitHub, com 20 committers ativos", () => {
-    expect(ENTRADAS_PADRAO.ghasGitHub).toBe(true);
-    expect(ENTRADAS_PADRAO.ghazdo).toBe(false);
+  it("cobra 15 Basic, dá 5 grátis e o job sai da cota grátis", () => {
+    const azure = calcularAzureAtual();
+    expect(azure.linhas.map((item) => item.rotulo)).toEqual([
+      "Basic · 15 pagos, 5 grátis",
+      "1 job paralelo · grátis",
+      "GHAzDO",
+    ]);
+    expect(linha(azure, "Basic")).toBe(15 * 6);
+    expect(linha(azure, "1 job")).toBe(0);
+    expect(linha(azure, "GHAzDO")).toBe(0);
+    expect(azure.mensalUsd).toBe(90);
+    expect(azure.anualUsd).toBe(1080);
+    expect(azure.porPessoaUsd).toBe(4.5);
+    expect(azure.cadeirasGratis).toBe(5);
+    expect(frasesDeCadeiras(azure)).toBe("15 cadeiras pagas para 20 pessoas");
+  });
+
+  it("mostra o limite da cota grátis no detalhe do job", () => {
+    expect(linhaDoJob("microsoft-gratis").detalhe).toContain("60 min por execução, 1.800 min/mês");
+  });
+
+  it("calcula as alternativas do job que ainda precisam ser confirmadas", () => {
+    expect(calcularAzureAtual("microsoft-pago").mensalUsd).toBe(130);
+    expect(calcularAzureAtual("self-hosted-gratis").mensalUsd).toBe(90);
+    expect(linhaDoJob("self-hosted-gratis").detalhe).toContain("Self-hosted");
+  });
+
+  it("não muda com as entradas nem com os preços do GitHub", () => {
+    const outra = comparar(
+      entradas({ pessoas: 80, minutosMes: 90000, planoGitHub: "enterprise" }),
+      PREMISSAS_PADRAO,
+      { ...PRECOS_OFICIAIS, ghTeam: 99 },
+    );
+    expect(outra.azure.mensalUsd).toBe(90);
+  });
+
+  it("descreve a capacidade como 1 job em fila única", () => {
+    expect(CAPACIDADE_AZURE_ATUAL.titulo).toBe("1 job, fila única");
+    expect(CITACOES.filaUnica.texto).toBe(
+      "If you have one parallel job, you can run one pipeline job at a time.",
+    );
+  });
+});
+
+describe("GitHub no padrão", () => {
+  it("parte de 20 pessoas no Team, GHAS ligado e 20 committers ativos", () => {
+    expect(ENTRADAS_PADRAO.pessoas).toBe(20);
+    expect(ENTRADAS_PADRAO.planoGitHub).toBe("team");
+    expect(ENTRADAS_PADRAO.ghas).toBe(true);
     expect(ENTRADAS_PADRAO.codeSecurity).toBe(true);
     expect(ENTRADAS_PADRAO.secretProtection).toBe(true);
-    expect(ENTRADAS_PADRAO.committersAtivos).toBe(ENTRADAS_PADRAO.pessoas);
+    expect(ENTRADAS_PADRAO.committersAtivos).toBe(20);
+    expect(ENTRADAS_PADRAO.minutosMes).toBe(1800);
   });
 
-  it("cobra 15 Basic e 1 job Microsoft-hosted no Azure DevOps, sem GHAzDO", () => {
-    const azure = calcularAzure(ENTRADAS_PADRAO, PREMISSAS_PADRAO);
-    expect(azure.linhas.some((item) => item.rotulo.startsWith("GHAzDO"))).toBe(false);
-    expect(linha(azure, "Basic")).toBe(15 * 6);
-    expect(linha(azure, "Jobs Microsoft-hosted")).toBe(40);
-    expect(azure.mensalUsd).toBe(130);
-    expect(azure.anualUsd).toBe(1560);
-    expect(azure.cadeirasDuplicadas).toBe(0);
-    expect(frasesDeCadeiras(azure)).toBe("15 cadeiras pagas para 20 pessoas");
-  });
-
-  it("cobra 20 assentos Team, o excedente de minutos e GHAS no GitHub", () => {
+  it("cobra 20 assentos, nenhum minuto excedente e GHAS por committer", () => {
     const github = calcularGitHub(ENTRADAS_PADRAO, PREMISSAS_PADRAO);
     expect(linha(github, "GitHub Team")).toBe(80);
-    expect(linha(github, "Actions (minutos hospedados)")).toBeCloseTo(3000 * 0.006);
+    expect(linha(github, "Actions")).toBe(0);
+    expect(github.linhas.find((item) => item.rotulo.startsWith("Actions"))?.detalhe).toContain(
+      "1.800 min usados, 3.000 incluídos, 0 excedentes",
+    );
     expect(linha(github, "Code Security")).toBe(20 * 30);
     expect(linha(github, "Secret Protection")).toBe(20 * 19);
-    expect(github.mensalUsd).toBeCloseTo(1078);
-    expect(github.anualUsd).toBeCloseTo(12936);
-    expect(github.porPessoaUsd).toBeCloseTo(53.9);
-    expect(github.avisos.join(" ")).not.toContain("CodeQL");
+    expect(github.mensalUsd).toBe(1060);
+    expect(github.anualUsd).toBe(12720);
+    expect(github.porPessoaUsd).toBe(53);
+    expect(github.cadeirasGratis).toBe(0);
     expect(frasesDeCadeiras(github)).toBe("20 cadeiras pagas para 20 pessoas");
   });
-});
 
-describe("várias orgs com acesso cruzado", () => {
-  const cenario = entradas({
-    pessoas: 20,
-    organizacoes: 5,
-    pessoasCruzadas: 8,
-    mediaOrgsCruzadas: 3,
-    minutosMes: 0,
+  it("sem GHAS, cobra só assentos e avisa sobre CodeQL em repositório privado", () => {
+    const github = calcularGitHub(entradas({ ghas: false }), PREMISSAS_PADRAO);
+    expect(github.mensalUsd).toBe(80);
+    expect(github.avisos.join(" ")).toContain("CodeQL");
   });
 
-  it("cobra uma cadeira por org em que a pessoa cruzada entra", () => {
-    const azure = calcularAzure(cenario, PREMISSAS_PADRAO);
-    expect(azure.cadeirasDuplicadas).toBe(16);
-    expect(linha(azure, "Basic")).toBe((12 + 8 * 3 - 25) * 6);
-    expect(frasesDeCadeiras(azure)).toBe("11 cadeiras pagas para 20 pessoas");
+  it("permite só um dos produtos do GHAS", () => {
+    const github = calcularGitHub(entradas({ codeSecurity: false }), PREMISSAS_PADRAO);
+    expect(linha(github, "Code Security")).toBe(0);
+    expect(linha(github, "Secret Protection")).toBe(380);
   });
 
-  it("sem os 5 grátis, mostra todas as 36 cadeiras para 20 pessoas", () => {
-    const azure = calcularAzure(cenario, premissas({ cincoBasicGratis: false }));
-    expect(linha(azure, "Basic")).toBe(36 * 6);
-    expect(frasesDeCadeiras(azure)).toBe("36 cadeiras pagas para 20 pessoas");
-  });
-
-  it("com multi-org billing, cobra cada pessoa uma vez e 5 grátis por assinatura", () => {
-    const azure = calcularAzure(cenario, premissas({ multiOrg: true }));
-    expect(azure.cadeirasDuplicadas).toBe(0);
-    expect(linha(azure, "Basic")).toBe((20 - 5) * 6);
-    expect(frasesDeCadeiras(azure)).toBe("15 cadeiras pagas para 20 pessoas");
-  });
-
-  it("ignora multi-org billing quando as orgs não dividem a assinatura", () => {
-    const azure = calcularAzure(cenario, premissas({ multiOrg: true, mesmaAssinatura: false }));
-    expect(azure.cadeirasDuplicadas).toBe(16);
-    expect(azure.avisos.join(" ")).toContain("mesma assinatura");
-  });
-
-  it("no GitHub, cada pessoa paga uma cadeira só", () => {
-    const github = calcularGitHub(cenario, PREMISSAS_PADRAO);
-    expect(github.cadeirasPagas).toBe(20);
-    expect(github.cadeirasDuplicadas).toBe(0);
-  });
-
-  it("não deixa a média passar do número de orgs", () => {
-    const normal = normalizar(
-      entradas({ organizacoes: 3, pessoasCruzadas: 4, mediaOrgsCruzadas: 9 }),
-    );
-    expect(normal.mediaOrgsCruzadas).toBe(3);
-  });
-
-  it("zera o acesso cruzado quando há uma org só", () => {
-    const normal = normalizar(entradas({ organizacoes: 1, pessoasCruzadas: 6 }));
-    expect(normal.pessoasCruzadas).toBe(0);
-    expect(normal.mediaOrgsCruzadas).toBe(1);
-  });
-});
-
-describe("Test Plans", () => {
-  it("cobra Basic + Test Plans à parte do Basic", () => {
-    const azure = calcularAzure(
-      entradas({ usuariosTestPlans: 4, minutosMes: 0 }),
-      PREMISSAS_PADRAO,
-    );
-    expect(linha(azure, "Basic + Test Plans")).toBe(4 * 52);
-    expect(linha(azure, "Basic")).toBe((16 - 5) * 6);
-  });
-
-  it("por org, tester cruzado paga Test Plans em cada org", () => {
-    const cenario = entradas({
-      organizacoes: 2,
-      pessoasCruzadas: 2,
-      mediaOrgsCruzadas: 2,
-      usuariosTestPlans: 3,
-      testersCruzados: 2,
-      minutosMes: 0,
-    });
-    const azure = calcularAzure(cenario, PREMISSAS_PADRAO);
-    expect(linha(azure, "Basic + Test Plans")).toBe(5 * 52);
-  });
-
-  it("com multi-org, tester com Basic noutra org paga os dois (limitação documentada)", () => {
-    const cenario = entradas({
-      organizacoes: 2,
-      pessoasCruzadas: 2,
-      mediaOrgsCruzadas: 2,
-      usuariosTestPlans: 3,
-      testersCruzados: 2,
-      minutosMes: 0,
-    });
-    const comLimite = calcularAzure(cenario, premissas({ multiOrg: true }));
-    expect(linha(comLimite, "Basic + Test Plans")).toBe(3 * 52);
-    expect(linha(comLimite, "Basic")).toBe((17 + 2 - 5) * 6);
-    expect(comLimite.cadeirasDuplicadas).toBe(2);
-
-    const semLimite = calcularAzure(
-      cenario,
-      premissas({ multiOrg: true, testPlansEmUmaOrg: false }),
-    );
-    expect(linha(semLimite, "Basic")).toBe((17 - 5) * 6);
-  });
-});
-
-describe("Stakeholder", () => {
-  it("é grátis no Azure DevOps por padrão e ocupa assento no GitHub", () => {
-    const cenario = entradas({ stakeholders: 10, minutosMes: 0 });
-    expect(linha(calcularAzure(cenario, PREMISSAS_PADRAO), "Basic")).toBe(15 * 6);
-    expect(calcularGitHub(cenario, PREMISSAS_PADRAO).cadeirasPagas).toBe(30);
-  });
-
-  it("vira Basic pago quando a premissa é desligada", () => {
-    const cenario = entradas({ stakeholders: 10, minutosMes: 0 });
-    const azure = calcularAzure(cenario, premissas({ stakeholderGratis: false }));
-    expect(linha(azure, "Basic")).toBe(25 * 6);
-    expect(calcularGitHub(cenario, premissas({ stakeholdersNoGitHub: false })).cadeirasPagas).toBe(
-      20,
-    );
-  });
-});
-
-describe("pipelines no Azure DevOps", () => {
-  it("a cota grátis cobre 1 job até 1.800 min por org", () => {
-    const azure = calcularAzure(entradas({ minutosMes: 1800 }), PREMISSAS_PADRAO);
-    expect(linha(azure, "Jobs Microsoft-hosted")).toBe(0);
-  });
-
-  it("acima de 1.800 min por org, cobra 1 job em cada org", () => {
-    const azure = calcularAzure(entradas({ minutosMes: 9000, organizacoes: 2 }), PREMISSAS_PADRAO);
-    expect(linha(azure, "Jobs Microsoft-hosted")).toBe(2 * 40);
-    expect(azure.avisos.join(" ")).toContain("cota grátis");
-  });
-
-  it("dividir os minutos entre orgs pode manter cada uma na cota grátis", () => {
-    const azure = calcularAzure(entradas({ minutosMes: 3000, organizacoes: 2 }), PREMISSAS_PADRAO);
-    expect(linha(azure, "Jobs Microsoft-hosted")).toBe(0);
-  });
-
-  it("2 jobs paralelos saindo da cota grátis custam 2 jobs", () => {
-    const azure = calcularAzure(
-      entradas({ minutosMes: 100, jobsMicrosoftPorOrg: 2 }),
-      PREMISSAS_PADRAO,
-    );
-    expect(linha(azure, "Jobs Microsoft-hosted")).toBe(80);
-  });
-
-  it("sem a cota grátis, todo job Microsoft-hosted é pago", () => {
-    const azure = calcularAzure(
-      entradas({ minutosMes: 100 }),
-      premissas({ cotaGratisMicrosoftHosted: false }),
-    );
-    expect(linha(azure, "Jobs Microsoft-hosted")).toBe(40);
-  });
-
-  it("o primeiro job self-hosted é grátis em cada org", () => {
-    const azure = calcularAzure(
-      entradas({ minutosMes: 0, organizacoes: 2, jobsSelfHostedPorOrg: 3 }),
-      PREMISSAS_PADRAO,
-    );
-    expect(linha(azure, "Jobs self-hosted")).toBe(2 * 2 * 15);
-  });
-
-  it("minutos em self-hosted saem da conta Microsoft-hosted", () => {
-    const azure = calcularAzure(
-      entradas({ minutosMes: 6000, percentualSelfHosted: 100 }),
-      PREMISSAS_PADRAO,
-    );
-    expect(linha(azure, "Jobs Microsoft-hosted")).toBe(0);
+  it("não conta mais committers do que pessoas", () => {
+    expect(normalizar(entradas({ pessoas: 10, committersAtivos: 30 })).committersAtivos).toBe(10);
   });
 });
 
 describe("Actions no GitHub", () => {
+  it("cobra o excedente acima dos 3.000 minutos do Team", () => {
+    const github = calcularGitHub(entradas({ minutosMes: 6000 }), PREMISSAS_PADRAO);
+    expect(linha(github, "Actions")).toBeCloseTo(3000 * 0.006);
+  });
+
   it("Enterprise inclui 50.000 minutos", () => {
     const github = calcularGitHub(
       entradas({ planoGitHub: "enterprise", minutosMes: 60000 }),
       PREMISSAS_PADRAO,
     );
     expect(linha(github, "GitHub Enterprise")).toBe(20 * 21);
-    expect(linha(github, "Actions (minutos hospedados)")).toBeCloseTo(10000 * 0.006);
+    expect(linha(github, "Actions")).toBeCloseTo(10000 * 0.006);
   });
 
   it("usa a tarifa do runner escolhido", () => {
@@ -250,16 +160,14 @@ describe("Actions no GitHub", () => {
       entradas({ runnerGitHub: "windows-2", minutosMes: 4000 }),
       PREMISSAS_PADRAO,
     );
-    expect(linha(github, "Actions (minutos hospedados)")).toBeCloseTo(1000 * 0.01);
+    expect(linha(github, "Actions")).toBeCloseTo(1000 * 0.01);
   });
 
   it("o multiplicador antigo de SO reduz os minutos incluídos", () => {
     const cenario = entradas({ runnerGitHub: "macos", minutosMes: 1000 });
-    expect(linha(calcularGitHub(cenario, PREMISSAS_PADRAO), "Actions (minutos hospedados)")).toBe(
-      0,
-    );
+    expect(linha(calcularGitHub(cenario, PREMISSAS_PADRAO), "Actions")).toBe(0);
     const antigo = calcularGitHub(cenario, premissas({ multiplicadorDeSo: true }));
-    expect(linha(antigo, "Actions (minutos hospedados)")).toBeCloseTo(700 * 0.062);
+    expect(linha(antigo, "Actions")).toBeCloseTo(700 * 0.062);
   });
 
   it("sem minutos incluídos, cobra todos os minutos", () => {
@@ -267,7 +175,7 @@ describe("Actions no GitHub", () => {
       entradas({ minutosMes: 1000 }),
       premissas({ minutosIncluidosGitHub: false }),
     );
-    expect(linha(github, "Actions (minutos hospedados)")).toBeCloseTo(6);
+    expect(linha(github, "Actions")).toBeCloseTo(6);
   });
 
   it("runner self-hosted não gasta minuto pago", () => {
@@ -275,55 +183,34 @@ describe("Actions no GitHub", () => {
       entradas({ minutosMes: 10000, percentualSelfHosted: 100 }),
       PREMISSAS_PADRAO,
     );
-    expect(linha(github, "Actions (minutos hospedados)")).toBe(0);
+    expect(linha(github, "Actions")).toBe(0);
   });
 });
 
-describe("GHAS", () => {
-  it("cobra Code Security e Secret Protection por committer ativo nos dois lados", () => {
-    const cenario = entradas({ ghazdo: true, committersAtivos: 12, minutosMes: 0 });
-    const { azure, github } = comparar(cenario, PREMISSAS_PADRAO);
-    expect(linha(azure, "GHAzDO Code Security")).toBe(12 * 30);
-    expect(linha(azure, "GHAzDO Secret Protection")).toBe(12 * 19);
-    expect(linha(github, "Code Security")).toBe(12 * 30);
-    expect(linha(github, "Secret Protection")).toBe(12 * 19);
-  });
-
-  it("permite só um dos produtos", () => {
-    const github = calcularGitHub(
-      entradas({ codeSecurity: false, committersAtivos: 10 }),
-      PREMISSAS_PADRAO,
+describe("capacidade de pipeline", () => {
+  it("segue o plano: minutos incluídos e jobs simultâneos da documentação", () => {
+    expect(minutosIncluidos("team")).toBe(3000);
+    expect(minutosIncluidos("enterprise")).toBe(50000);
+    expect(jobsSimultaneos("team")).toEqual({ total: 60, macos: 5 });
+    expect(jobsSimultaneos("enterprise")).toEqual({ total: 500, macos: 50 });
+    expect(capacidadeGitHub("team", "linux-2").titulo).toBe(
+      "3.000 minutos inclusos + 60 jobs simultâneos",
     );
-    expect(linha(github, "Code Security")).toBe(0);
-    expect(linha(github, "Secret Protection")).toBe(190);
+    expect(capacidadeGitHub("enterprise", "linux-2").titulo).toBe(
+      "50.000 minutos inclusos + 500 jobs simultâneos",
+    );
   });
 
-  it("fora da mesma assinatura, o committer cruzado conta em cada org", () => {
-    const cenario = entradas({
-      ghazdo: true,
-      codeSecurity: true,
-      secretProtection: false,
-      organizacoes: 3,
-      pessoasCruzadas: 5,
-      mediaOrgsCruzadas: 2,
-      committersAtivos: 20,
-    });
-    expect(linha(calcularAzure(cenario, PREMISSAS_PADRAO), "GHAzDO Code Security")).toBe(20 * 30);
-    expect(
-      linha(calcularAzure(cenario, premissas({ mesmaAssinatura: false })), "GHAzDO Code Security"),
-    ).toBe(25 * 30);
+  it("avisa o limite de macOS quando o runner é macOS", () => {
+    expect(capacidadeGitHub("team", "macos").detalhe).toContain("macOS limitado a 5");
+    expect(capacidadeGitHub("enterprise", "macos").detalhe).toContain("macOS limitado a 50");
   });
 
-  it("cada lado liga e desliga sozinho", () => {
-    const soAzure = comparar(entradas({ ghasGitHub: false, ghazdo: true }), PREMISSAS_PADRAO);
-    expect(linha(soAzure.azure, "GHAzDO Code Security")).toBe(20 * 30);
-    expect(soAzure.github.linhas.some((item) => item.rotulo.includes("Security"))).toBe(false);
-  });
-
-  it("desligado no GitHub, não cobra e avisa sobre CodeQL em repositório privado", () => {
-    const github = calcularGitHub(entradas({ ghasGitHub: false }), PREMISSAS_PADRAO);
-    expect(github.linhas.some((item) => item.rotulo.includes("Security"))).toBe(false);
-    expect(github.avisos.join(" ")).toContain("CodeQL");
+  it("cita a tabela de limites do GitHub Actions", () => {
+    expect(CITACOES.jobsGitHub.fonte).toBe(FONTES.githubLimites);
+    expect(CITACOES.jobsGitHub.texto).toContain("Team | 60 | 5");
+    expect(CITACOES.jobsGitHub.texto).toContain("Enterprise | 500 | 50");
+    expect(CITACOES.minutosGitHub.texto).toContain("GitHub Team | 3,000");
   });
 });
 
@@ -334,7 +221,7 @@ describe("moeda", () => {
   });
 
   it("formata em pt-BR", () => {
-    expect(formatarMoeda(1560, "USD")).toMatch(/US\$\s1\.560,00/);
+    expect(formatarMoeda(1080, "USD")).toMatch(/US\$\s1\.080,00/);
     expect(formatarMoeda(500.96, "BRL")).toMatch(/R\$\s500,96/);
   });
 });
@@ -349,24 +236,29 @@ describe("tabela de preços", () => {
     }
   });
 
+  it("só os preços do GitHub são editáveis", () => {
+    for (const ficha of FICHAS) {
+      expect(precoEditavel(ficha)).toBe(ficha.plataforma === "GitHub");
+    }
+  });
+
   it("marca como estimativa o preço editado", () => {
-    expect(origemDoPreco("azBasic", PRECOS_OFICIAIS.azBasic)).toBe("oficial");
-    expect(origemDoPreco("azBasic", 7)).toBe("estimativa");
+    expect(origemDoPreco("ghTeam", PRECOS_OFICIAIS.ghTeam)).toBe("oficial");
+    expect(origemDoPreco("ghTeam", 7)).toBe("estimativa");
   });
 
-  it("os preços editados entram na conta", () => {
-    const azure = calcularAzure(entradas({ minutosMes: 0 }), PREMISSAS_PADRAO, {
-      ...PRECOS_OFICIAIS,
-      azBasic: 10,
-    });
-    expect(linha(azure, "Basic")).toBe(150);
-  });
-
-  it("preço apagado no campo conta como zero, sem NaN", () => {
-    const azure = calcularAzure(ENTRADAS_PADRAO, PREMISSAS_PADRAO, {
-      ...PRECOS_OFICIAIS,
-      azBasic: Number.NaN,
-    });
-    expect(azure.mensalUsd).toBe(40);
+  it("os preços editados do GitHub entram na conta, e campo vazio conta como zero", () => {
+    expect(
+      calcularGitHub(entradas({ ghas: false }), PREMISSAS_PADRAO, {
+        ...PRECOS_OFICIAIS,
+        ghTeam: 10,
+      }).mensalUsd,
+    ).toBe(200);
+    expect(
+      calcularGitHub(entradas({ ghas: false }), PREMISSAS_PADRAO, {
+        ...PRECOS_OFICIAIS,
+        ghTeam: Number.NaN,
+      }).mensalUsd,
+    ).toBe(0);
   });
 });
