@@ -10,14 +10,13 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: pipeline-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   deteccao:
     name: Detecção de tecnologia
     if: github.event.action != 'closed'
+    concurrency:
+      group: pipeline-ci-${{ (github.event_name == 'pull_request' && github.ref) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -48,6 +47,9 @@ jobs:
       security-events: write
       pull-requests: write
       checks: write
+    concurrency:
+      group: pipeline-ci-${{ (github.event_name == 'pull_request' && github.ref) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -97,6 +99,9 @@ jobs:
   testes:
     name: Testes e cobertura
     needs: gates
+    concurrency:
+      group: pipeline-ci-${{ (github.event_name == 'pull_request' && github.ref) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -114,6 +119,9 @@ jobs:
   build:
     name: Build e scan
     needs: testes
+    concurrency:
+      group: pipeline-ci-${{ (github.event_name == 'pull_request' && github.ref) || github.run_id }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -157,6 +165,9 @@ jobs:
       id-token: write
       contents: read
       pull-requests: write
+    concurrency:
+      group: preview-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Sem pull request
@@ -280,6 +291,9 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    concurrency:
+      group: deploy-dev-${{ github.ref }}
+      queue: max
     runs-on: ubuntu-latest
     steps:
       - name: Apply na main
@@ -363,6 +377,9 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    concurrency:
+      group: deploy-hml-${{ github.ref }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Deploy simulado
@@ -382,6 +399,9 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    concurrency:
+      group: deploy-hml-${{ github.ref }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Teste de carga
@@ -401,6 +421,9 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    concurrency:
+      group: deploy-prd-${{ github.ref }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - name: Deploy simulado

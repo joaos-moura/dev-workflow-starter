@@ -24,7 +24,7 @@ arn:aws:iam::642155085958:role/github-dev-workflow-starter-deploy
 
 A cópia usa a árvore da `main`, não a API de generate. A marca **Template repository** só é necessária para o workflow `novo-projeto`.
 
-O push da `main`, feito pelo `publish:github`, também inicia o Pipeline. O job **CD Dev** aplica o workspace `dev` nesse push e de novo no `workflow_dispatch`. O grupo de concorrência é `pipeline-${{ github.ref }}`. Na `main` a execução em andamento segue, então o segundo apply espera. O apply é idempotente. Se o GitHub ainda não indexou o workflow no momento do disparo, a execução do push continua sendo o bootstrap.
+O push da `main`, feito pelo `publish:github`, também inicia o Pipeline. O job **CD Dev** aplica o workspace `dev` nesse push e de novo no `workflow_dispatch`. Os applies do mesmo ref entram na fila `deploy-dev-<ref>` (`queue: max`) e não se cancelam. Uma aprovação pendente de HML fica em outro grupo e não segura esse apply. O apply é idempotente. Se o GitHub ainda não indexou o workflow no momento do disparo, a execução do push continua sendo o bootstrap.
 
 **CD HML**, **Perf HML** e **CD PRD** só rodam no push da `main`. Nesse push, **CD HML** para em _Waiting for review_ quando o ambiente `hml` tem revisor. No pull request e no `workflow_dispatch` esses jobs ficam skipped. Este template não aprova deploy.
 
