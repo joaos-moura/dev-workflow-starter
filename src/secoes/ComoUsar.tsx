@@ -17,7 +17,8 @@ export function ComoUsar() {
           </li>
           <li>
             <b>Defina AWS_ROLE_ARN</b>O workflow garante o bucket de estado, comenta o plan e
-            publica o preview em <code className="i">pr-&lt;n&gt;</code>.
+            publica o preview em <code className="i">pr-&lt;n&gt;</code>. O comentário do preview
+            traz o site no S3 e a URL da API na Lambda.
           </li>
           <li>
             <b>Faça o merge</b>Aplica o workspace dev e publica o GitHub Pages.

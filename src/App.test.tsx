@@ -307,6 +307,7 @@ describe("seções da página", () => {
     expect(secao).toHaveTextContent("GitHub Pages");
     expect(secao).toHaveTextContent("O workspace do preview é destruído.");
     expect(secao).toHaveTextContent("use_lockfile");
+    expect(secao).toHaveTextContent("URL da API na Lambda");
   });
 
   it("usa no terminal a mesma variável de repositório que os workflows leem", () => {
