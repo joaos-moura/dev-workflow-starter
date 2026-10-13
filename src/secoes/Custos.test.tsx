@@ -25,10 +25,16 @@ describe("seção de custos", () => {
     expect(screen.getByRole("switch", { name: /Primeiros 5 Basic grátis/ })).toBeChecked();
     expect(screen.getByTestId("mensal-az")).toHaveTextContent("US$ 130,00");
     expect(screen.getByTestId("anual-az")).toHaveTextContent("US$ 1.560,00");
-    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 98,00");
+    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 1.078,00");
+    expect(screen.getByTestId("anual-gh")).toHaveTextContent("US$ 12.936,00");
+    expect(screen.getByRole("switch", { name: /GHAS no GitHub/ })).toBeChecked();
+    expect(screen.getByRole("switch", { name: /GHAzDO no Azure DevOps/ })).not.toBeChecked();
+    expect(campo("Committers ativos (90 dias)")).toHaveValue(20);
+    expect(campo("Committers ativos (90 dias)")).toBeEnabled();
     expect(screen.getByRole("article", { name: "Azure DevOps" })).toHaveTextContent(
       "15 cadeiras pagas para 20 pessoas",
     );
+    expect(screen.getByRole("article", { name: "Azure DevOps" })).not.toHaveTextContent("GHAzDO");
   });
 
   it("mostra a duplicação de cadeiras com acesso cruzado e some com multi-org", () => {
@@ -53,10 +59,19 @@ describe("seção de custos", () => {
     expect(screen.getByTestId("mensal-az")).toHaveTextContent("R$ 650,00");
   });
 
-  it("liga GHAS e cobra por committer", () => {
-    fireEvent.click(screen.getByRole("switch", { name: /GHAS ligado/ }));
-    expect(screen.getByRole("article", { name: "GitHub" })).toHaveTextContent("Code Security");
-    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 1.078,00");
+  it("liga e desliga GHAS em cada lado, cobrando por committer", () => {
+    fireEvent.click(screen.getByRole("switch", { name: /GHAzDO no Azure DevOps/ }));
+    expect(screen.getByRole("article", { name: "Azure DevOps" })).toHaveTextContent(
+      "GHAzDO Code Security",
+    );
+    expect(screen.getByTestId("mensal-az")).toHaveTextContent("US$ 1.110,00");
+
+    fireEvent.click(screen.getByRole("switch", { name: /GHAS no GitHub/ }));
+    expect(screen.getByRole("article", { name: "GitHub" })).not.toHaveTextContent("Code Security");
+    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 98,00");
+
+    fireEvent.click(screen.getByRole("switch", { name: /GHAzDO no Azure DevOps/ }));
+    expect(campo("Committers ativos (90 dias)")).toBeDisabled();
   });
 
   it("lista cada preço com fonte, data e selo oficial", () => {

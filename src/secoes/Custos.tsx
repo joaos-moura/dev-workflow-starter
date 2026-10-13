@@ -118,6 +118,7 @@ export function Custos() {
   const { azure, github } = comparar(entradas, premissas, precos);
   const maior = Math.max(azure.mensalUsd, github.mensalUsd, 1);
   const varias = normal.organizacoes > 1;
+  const algumGhas = entradas.ghasGitHub || entradas.ghazdo;
   const valor = (usd: number) =>
     formatarMoeda(converter(usd, normal.moeda, normal.cambio), normal.moeda);
 
@@ -146,7 +147,7 @@ export function Custos() {
               rotulo="Pessoas (devs)"
               valor={entradas.pessoas}
               aoMudar={mudar("pessoas")}
-              dica="Pessoas distintas, somando todas as orgs."
+              dica="Total de pessoas distintas, somando todas as orgs."
             />
             <CampoNumero
               rotulo="Organizações Azure DevOps"
@@ -244,26 +245,38 @@ export function Custos() {
               opcoes={PLANOS}
               aoMudar={mudar("planoGitHub")}
             />
-            <Interruptor rotulo="GHAS ligado" ligado={entradas.ghas} aoMudar={mudar("ghas")}>
-              <small>GHAzDO no Azure DevOps, GitHub Advanced Security no GitHub.</small>
+            <Interruptor
+              rotulo="GHAS no GitHub"
+              ligado={entradas.ghasGitHub}
+              aoMudar={mudar("ghasGitHub")}
+            >
+              <small>Ligado por padrão: a segurança roda no pipeline do GitHub.</small>
+            </Interruptor>
+            <Interruptor
+              rotulo="GHAzDO no Azure DevOps"
+              ligado={entradas.ghazdo}
+              aoMudar={mudar("ghazdo")}
+            >
+              <small>Desligado por padrão: o uso atual do Azure DevOps não tem GHAzDO.</small>
             </Interruptor>
             <Interruptor
               rotulo="Code Security"
               ligado={entradas.codeSecurity}
               aoMudar={mudar("codeSecurity")}
-              desligado={!entradas.ghas}
+              desligado={!algumGhas}
             />
             <Interruptor
               rotulo="Secret Protection"
               ligado={entradas.secretProtection}
               aoMudar={mudar("secretProtection")}
-              desligado={!entradas.ghas}
+              desligado={!algumGhas}
             />
             <CampoNumero
               rotulo="Committers ativos (90 dias)"
               valor={entradas.committersAtivos}
               aoMudar={mudar("committersAtivos")}
-              desligado={!entradas.ghas}
+              desligado={!algumGhas}
+              dica="Começa igual ao número de pessoas: todo dev commita."
             />
           </fieldset>
 

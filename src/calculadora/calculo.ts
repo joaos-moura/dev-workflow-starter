@@ -28,7 +28,8 @@ export type Entradas = {
   percentualSelfHosted: number;
   jobsMicrosoftPorOrg: number;
   jobsSelfHostedPorOrg: number;
-  ghas: boolean;
+  ghasGitHub: boolean;
+  ghazdo: boolean;
   codeSecurity: boolean;
   secretProtection: boolean;
   committersAtivos: number;
@@ -62,7 +63,8 @@ export const ENTRADAS_PADRAO: Entradas = {
   percentualSelfHosted: 0,
   jobsMicrosoftPorOrg: 1,
   jobsSelfHostedPorOrg: 0,
-  ghas: false,
+  ghasGitHub: true,
+  ghazdo: false,
   codeSecurity: true,
   secretProtection: true,
   committersAtivos: 20,
@@ -237,13 +239,14 @@ function minutosHospedados(entradas: Entradas) {
 }
 
 function custoSeguranca(
+  ligado: boolean,
   entradas: Entradas,
   committers: number,
   idCode: IdPreco,
   idSecret: IdPreco,
   precos: Precos,
 ): Linha[] {
-  if (!entradas.ghas) return [];
+  if (!ligado) return [];
   const linhas: Linha[] = [];
   if (entradas.codeSecurity) {
     linhas.push({
@@ -363,7 +366,7 @@ export function calcularAzure(
     ? e.committersAtivos
     : e.committersAtivos + committersCruzados * (e.mediaOrgsCruzadas - 1);
   linhas.push(
-    ...custoSeguranca(e, committers, "azCodeSecurity", "azSecretProtection", precos).map(
+    ...custoSeguranca(e.ghazdo, e, committers, "azCodeSecurity", "azSecretProtection", precos).map(
       (linha) => ({ ...linha, rotulo: `GHAzDO ${linha.rotulo}` }),
     ),
   );
@@ -411,9 +414,16 @@ export function calcularGitHub(
   }
 
   linhas.push(
-    ...custoSeguranca(e, e.committersAtivos, "ghCodeSecurity", "ghSecretProtection", precos),
+    ...custoSeguranca(
+      e.ghasGitHub,
+      e,
+      e.committersAtivos,
+      "ghCodeSecurity",
+      "ghSecretProtection",
+      precos,
+    ),
   );
-  if (!e.ghas) {
+  if (!e.ghasGitHub) {
     avisos.push(
       "Sem GHAS, CodeQL em repositório privado não roda; gates abertos no Actions custam só minutos.",
     );
