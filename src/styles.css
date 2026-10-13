@@ -1663,7 +1663,7 @@ footer a {
 
 .fixo dl {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 14px;
 }
@@ -2033,6 +2033,16 @@ footer a {
   margin-top: 12px;
   display: grid;
   gap: 6px;
+}
+
+.painel .upgrade {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px dashed #d9dcff;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--accent);
 }
 
 .painel .avisos li {

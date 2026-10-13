@@ -2,10 +2,9 @@ import {
   BASIC_GRATIS_POR_ORG,
   CAMBIO_PTAX_VENDA,
   JOBS_SELF_HOSTED_GRATIS_POR_ORG,
-  MINUTOS_GRATIS_MICROSOFT_POR_ORG,
   MINUTOS_INCLUIDOS_ENTERPRISE,
   MINUTOS_INCLUIDOS_TEAM,
-  MINUTOS_POR_EXECUCAO_GRATIS,
+  MINUTOS_POR_JOB_MICROSOFT_PAGO,
   MULTIPLICADOR_MACOS,
   MULTIPLICADOR_WINDOWS,
   PRECOS_OFICIAIS,
@@ -16,7 +15,6 @@ import {
 export type PlanoGitHub = "team" | "enterprise";
 export type RunnerGitHub = "linux-1" | "linux-2" | "linux-arm64" | "windows-2" | "macos";
 export type Moeda = "USD" | "BRL";
-export type TipoJobAzure = "microsoft-gratis" | "microsoft-pago" | "self-hosted-gratis";
 
 export type Entradas = {
   pessoas: number;
@@ -37,31 +35,29 @@ export type Premissas = {
   multiplicadorDeSo: boolean;
 };
 
-/**
- * Uso de hoje no Azure DevOps, sem campo editável. O tipo do job ainda precisa ser confirmado;
- * o padrão é a cota grátis Microsoft-hosted, que a documentação dá a toda org com cobrança ligada.
- */
+/** Uso de hoje no Azure DevOps, em projetos privados, sem campo editável. */
 export const CENARIO_ATUAL_AZURE = {
   organizacoes: 1,
   pessoas: 20,
-  jobsParalelos: 1,
-  tipoJob: "microsoft-gratis",
+  jobsMicrosoftPagos: 1,
+  jobsSelfHostedGratis: JOBS_SELF_HOSTED_GRATIS_POR_ORG,
+  jobsSelfHostedPagos: 2,
   ghazdo: false,
-} as const satisfies {
-  organizacoes: number;
-  pessoas: number;
-  jobsParalelos: number;
-  tipoJob: TipoJobAzure;
-  ghazdo: boolean;
-};
+} as const;
+
+/**
+ * Sem medição de uso ainda: 1.800 min/mês é só um ponto de partida editável, abaixo dos
+ * 3.000 incluídos no Team. O número real sai do relatório de consumo do pool no Azure DevOps.
+ */
+export const MINUTOS_PADRAO = 1800;
 
 export const ENTRADAS_PADRAO: Entradas = {
   pessoas: CENARIO_ATUAL_AZURE.pessoas,
-  minutosMes: MINUTOS_GRATIS_MICROSOFT_POR_ORG,
+  minutosMes: MINUTOS_PADRAO,
   percentualSelfHosted: 0,
   planoGitHub: "team",
   runnerGitHub: "linux-2",
-  ghas: true,
+  ghas: false,
   codeSecurity: true,
   secretProtection: true,
   committersAtivos: CENARIO_ATUAL_AZURE.pessoas,
@@ -224,37 +220,18 @@ export function capacidadeGitHub(plano: PlanoGitHub, runner: RunnerGitHub): Capa
   };
 }
 
-export const CAPACIDADE_AZURE_ATUAL: Capacidade = {
-  titulo: "1 job, fila única",
-  detalhe: "Um build por vez; os outros esperam na fila da org.",
-};
-
-export function linhaDoJob(tipo: TipoJobAzure, precos: Precos = PRECOS_OFICIAIS): Linha {
-  switch (tipo) {
-    case "microsoft-gratis":
-      return {
-        rotulo: "1 job paralelo · grátis",
-        detalhe: `Microsoft-hosted, cota grátis: ${MINUTOS_POR_EXECUCAO_GRATIS} min por execução, ${fmt(MINUTOS_GRATIS_MICROSOFT_POR_ORG)} min/mês`,
-        usd: 0,
-      };
-    case "microsoft-pago":
-      return {
-        rotulo: "1 job paralelo · pago",
-        detalhe: `Microsoft-hosted, minutos ilimitados × ${dolar(precos.azJobMicrosoft)}`,
-        usd: precos.azJobMicrosoft,
-      };
-    case "self-hosted-gratis":
-      return {
-        rotulo: "1 job paralelo · grátis",
-        detalhe: `Self-hosted, ${JOBS_SELF_HOSTED_GRATIS_POR_ORG} job grátis por org, sem limite de minutos`,
-        usd: 0,
-      };
-    default: {
-      const nunca: never = tipo;
-      return nunca;
-    }
-  }
+export function jobsSelfHostedAzure(): number {
+  return CENARIO_ATUAL_AZURE.jobsSelfHostedGratis + CENARIO_ATUAL_AZURE.jobsSelfHostedPagos;
 }
+
+export function jobsSimultaneosAzure(): number {
+  return CENARIO_ATUAL_AZURE.jobsMicrosoftPagos + jobsSelfHostedAzure();
+}
+
+export const CAPACIDADE_AZURE_ATUAL: Capacidade = {
+  titulo: `${CENARIO_ATUAL_AZURE.jobsMicrosoftPagos} hosted + ${jobsSelfHostedAzure()} self-hosted = até ${jobsSimultaneosAzure()} jobs simultâneos`,
+  detalhe: `Só ${CENARIO_ATUAL_AZURE.jobsMicrosoftPagos} em máquina da Microsoft; os outros ${jobsSelfHostedAzure()} rodam nos agentes próprios.`,
+};
 
 function fechar(
   linhas: Linha[],
@@ -276,11 +253,9 @@ function fechar(
   };
 }
 
-export function calcularAzureAtual(
-  tipoJob: TipoJobAzure = CENARIO_ATUAL_AZURE.tipoJob,
-  precos: Precos = PRECOS_OFICIAIS,
-): Resultado {
-  const { pessoas, organizacoes } = CENARIO_ATUAL_AZURE;
+export function calcularAzureAtual(precos: Precos = PRECOS_OFICIAIS): Resultado {
+  const { pessoas, organizacoes, jobsMicrosoftPagos, jobsSelfHostedGratis, jobsSelfHostedPagos } =
+    CENARIO_ATUAL_AZURE;
   const gratis = Math.min(pessoas, BASIC_GRATIS_POR_ORG * organizacoes);
   const pagas = pessoas - gratis;
   const linhas: Linha[] = [
@@ -289,10 +264,54 @@ export function calcularAzureAtual(
       detalhe: `${pessoas} assentos − ${gratis} grátis × ${dolar(precos.azBasic)}`,
       usd: pagas * precos.azBasic,
     },
-    linhaDoJob(tipoJob, precos),
+    {
+      rotulo: `Job Microsoft-hosted · ${jobsMicrosoftPagos} pago`,
+      detalhe: `Sem limite mensal de minutos, até ${MINUTOS_POR_JOB_MICROSOFT_PAGO} min por job × ${dolar(precos.azJobMicrosoft)}`,
+      usd: jobsMicrosoftPagos * precos.azJobMicrosoft,
+    },
+    {
+      rotulo: `Jobs self-hosted · ${jobsSelfHostedPagos} pagos, ${jobsSelfHostedGratis} grátis`,
+      detalhe: `${jobsSelfHostedAzure()} jobs sem limite de minutos − ${jobsSelfHostedGratis} grátis × ${dolar(precos.azJobSelfHosted)}`,
+      usd: jobsSelfHostedPagos * precos.azJobSelfHosted,
+    },
     { rotulo: "GHAzDO", detalhe: "Não usado hoje", usd: 0 },
   ];
-  return fechar(linhas, pagas, gratis, pessoas, []);
+  return fechar(linhas, pagas, gratis, pessoas, [
+    "Fora da conta: o custo das máquinas dos agentes self-hosted (servidor ou nuvem, energia e manutenção).",
+  ]);
+}
+
+export type UpgradeGhas = { usd: number; produtos: string };
+
+/** Preço do GHAS para os committers informados, mostrado como upgrade opcional quando está desligado. */
+export function upgradeGhas(bruto: Entradas, precosBrutos: Precos = PRECOS_OFICIAIS): UpgradeGhas {
+  const e = normalizar(bruto);
+  const precos = normalizarPrecos(precosBrutos);
+  const linhas = linhasGhas(e, precos);
+  return {
+    usd: linhas.reduce((soma, linha) => soma + linha.usd, 0),
+    produtos: linhas.map((linha) => linha.rotulo).join(" + "),
+  };
+}
+
+function linhasGhas(e: Entradas, precos: Precos): Linha[] {
+  const committers = e.committersAtivos;
+  const linhas: Linha[] = [];
+  if (e.codeSecurity) {
+    linhas.push({
+      rotulo: "Code Security",
+      detalhe: `${committers} committers ativos × ${dolar(precos.ghCodeSecurity)}`,
+      usd: committers * precos.ghCodeSecurity,
+    });
+  }
+  if (e.secretProtection) {
+    linhas.push({
+      rotulo: "Secret Protection",
+      detalhe: `${committers} committers ativos × ${dolar(precos.ghSecretProtection)}`,
+      usd: committers * precos.ghSecretProtection,
+    });
+  }
+  return linhas;
 }
 
 export function calcularGitHub(
@@ -330,21 +349,7 @@ export function calcularGitHub(
   }
 
   if (e.ghas) {
-    const committers = e.committersAtivos;
-    if (e.codeSecurity) {
-      linhas.push({
-        rotulo: "Code Security",
-        detalhe: `${committers} committers ativos × ${dolar(precos.ghCodeSecurity)}`,
-        usd: committers * precos.ghCodeSecurity,
-      });
-    }
-    if (e.secretProtection) {
-      linhas.push({
-        rotulo: "Secret Protection",
-        detalhe: `${committers} committers ativos × ${dolar(precos.ghSecretProtection)}`,
-        usd: committers * precos.ghSecretProtection,
-      });
-    }
+    linhas.push(...linhasGhas(e, precos));
   } else {
     avisos.push(
       "Sem GHAS, CodeQL em repositório privado não roda; gates abertos no Actions custam só minutos.",

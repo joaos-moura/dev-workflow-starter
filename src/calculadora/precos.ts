@@ -171,8 +171,7 @@ export const PRECOS_OFICIAIS: Precos = Object.fromEntries(
 /** Cotações e cotas oficiais que não são preço, mas entram na conta. */
 export const CAMBIO_PTAX_VENDA = 5.0096;
 export const BASIC_GRATIS_POR_ORG = 5;
-export const MINUTOS_GRATIS_MICROSOFT_POR_ORG = 1800;
-export const MINUTOS_POR_EXECUCAO_GRATIS = 60;
+export const MINUTOS_POR_JOB_MICROSOFT_PAGO = 360;
 export const JOBS_SELF_HOSTED_GRATIS_POR_ORG = 1;
 export const MINUTOS_INCLUIDOS_TEAM = 3000;
 export const MINUTOS_INCLUIDOS_ENTERPRISE = 50000;

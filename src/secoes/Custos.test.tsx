@@ -29,8 +29,11 @@ describe("seção de custos", () => {
     expect(within(fixo).queryAllByRole("textbox")).toEqual([]);
     expect(fixo).toHaveTextContent("Organizações1");
     expect(fixo).toHaveTextContent("Pessoas (Basic)20");
-    expect(fixo).toHaveTextContent("Jobs paralelos1");
+    expect(fixo).toHaveTextContent("Job Microsoft-hosted1 pago");
+    expect(fixo).toHaveTextContent("Jobs self-hosted3 (1 grátis + 2 pagos)");
     expect(fixo).toHaveTextContent("GHAzDOnão usado");
+    expect(fixo).toHaveTextContent("Não incluído: o custo das máquinas");
+    expect(fixo).not.toHaveTextContent("1.800");
     expect(screen.queryByLabelText("Organizações Azure DevOps")).toBeNull();
     expect(screen.queryByLabelText("Devs com acesso cruzado")).toBeNull();
     expect(screen.queryByRole("switch", { name: /Multi-org billing/ })).toBeNull();
@@ -40,8 +43,11 @@ describe("seção de custos", () => {
     const fixo = azureFixo();
     for (const citacao of [
       CITACOES.basicGratis,
-      CITACOES.jobMicrosoftGratis,
+      CITACOES.precoJobs,
+      CITACOES.jobMicrosoftPago,
+      CITACOES.limitePago,
       CITACOES.jobSelfHostedGratis,
+      CITACOES.selfHostedPorJob,
       CITACOES.porOrg,
       CITACOES.multiOrg,
     ]) {
@@ -53,16 +59,34 @@ describe("seção de custos", () => {
 
   it("abre com os valores padrão dos dois lados", () => {
     const azure = screen.getByRole("article", { name: "Azure DevOps · Cenário atual" });
-    expect(screen.getByTestId("mensal-az")).toHaveTextContent("US$ 90,00");
-    expect(screen.getByTestId("anual-az")).toHaveTextContent("US$ 1.080,00");
+    expect(screen.getByTestId("mensal-az")).toHaveTextContent("US$ 160,00");
+    expect(screen.getByTestId("anual-az")).toHaveTextContent("US$ 1.920,00");
     expect(azure).toHaveTextContent("15 cadeiras pagas para 20 pessoas · 5 grátis");
-    expect(azure).toHaveTextContent("1 job paralelo · grátis");
+    expect(azure).toHaveTextContent("Job Microsoft-hosted · 1 pago");
+    expect(azure).toHaveTextContent("Jobs self-hosted · 2 pagos, 1 grátis");
+    expect(azure).toHaveTextContent("Fora da conta: o custo das máquinas");
 
     expect(campo("Pessoas (devs)")).toHaveValue(20);
+    expect(campo("Minutos de pipeline por mês")).toHaveValue(1800);
     expect(campo("Committers ativos (90 dias)")).toHaveValue(20);
-    expect(screen.getByRole("switch", { name: /GHAS ligado/ })).toBeChecked();
-    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 1.060,00");
-    expect(screen.getByTestId("anual-gh")).toHaveTextContent("US$ 12.720,00");
+    expect(screen.getByRole("switch", { name: /GHAS ligado/ })).not.toBeChecked();
+    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 80,00");
+    expect(screen.getByTestId("anual-gh")).toHaveTextContent("US$ 960,00");
+  });
+
+  it("mostra o GHAS como upgrade opcional com preço calculado pelos committers", () => {
+    const upgrade = screen.getByTestId("upgrade-ghas");
+    expect(upgrade).toHaveTextContent(
+      "opcional +US$ 980,00/mês com Code Security + Secret Protection",
+    );
+    expect(screen.getByRole("switch", { name: /GHAS ligado/ }).closest("label")).toHaveTextContent(
+      "+US$ 980,00/mês com Code Security + Secret Protection",
+    );
+    digitar("Committers ativos (90 dias)", "10");
+    expect(upgrade).toHaveTextContent("+US$ 490,00/mês");
+    fireEvent.click(screen.getByRole("switch", { name: "Secret Protection" }));
+    expect(upgrade).toHaveTextContent("+US$ 300,00/mês com Code Security");
+    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 80,00");
   });
 
   it("o destaque de capacidade segue o plano escolhido", () => {
@@ -74,7 +98,10 @@ describe("seção de custos", () => {
     expect(destaque).toHaveTextContent("3.000 minutos inclusos + 60 jobs simultâneos");
 
     const azure = screen.getByRole("article", { name: "Capacidade do Azure DevOps" });
-    expect(azure).toHaveTextContent("1 job, fila única");
+    expect(azure).toHaveTextContent("1 hosted + 3 self-hosted = até 4 jobs simultâneos");
+    expect(azure).toHaveTextContent("Só 1 em máquina da Microsoft");
+    expect(azure).not.toHaveTextContent("fila única");
+    expect(azure).toHaveTextContent(CITACOES.concorrencia.texto);
     expect(azure.querySelector(`blockquote[cite="${FONTES.azureJobs}"]`)).not.toBeNull();
     const github = screen.getByRole("article", { name: "Capacidade do GitHub" });
     expect(github.querySelector(`blockquote[cite="${FONTES.githubLimites}"]`)).not.toBeNull();
@@ -86,20 +113,23 @@ describe("seção de custos", () => {
     digitar("Committers ativos (90 dias)", "12");
     digitar("Pessoas (devs)", "40");
     expect(campo("Committers ativos (90 dias)")).toHaveValue(12);
-    expect(screen.getByTestId("mensal-az")).toHaveTextContent("US$ 90,00");
+    expect(screen.getByTestId("mensal-az")).toHaveTextContent("US$ 160,00");
   });
 
-  it("desliga GHAS no GitHub", () => {
+  it("liga GHAS no GitHub e o upgrade entra no total", () => {
+    fireEvent.click(screen.getByRole("switch", { name: /GHAS ligado/ }));
+    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 1.060,00");
+    expect(screen.queryByTestId("upgrade-ghas")).toBeNull();
     fireEvent.click(screen.getByRole("switch", { name: /GHAS ligado/ }));
     expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 80,00");
-    expect(campo("Committers ativos (90 dias)")).toBeDisabled();
   });
 
   it("converte para real com câmbio editável", () => {
     fireEvent.click(screen.getByRole("radio", { name: "R$" }));
     digitar("Câmbio (R$ por US$)", "5");
-    expect(screen.getByTestId("mensal-az")).toHaveTextContent("R$ 450,00");
-    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("R$ 5.300,00");
+    expect(screen.getByTestId("mensal-az")).toHaveTextContent("R$ 800,00");
+    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("R$ 400,00");
+    expect(screen.getByTestId("upgrade-ghas")).toHaveTextContent("+R$ 4.900,00/mês");
   });
 
   it("lista cada preço com fonte e selo oficial; só o GitHub é editável", () => {
@@ -122,7 +152,7 @@ describe("seção de custos", () => {
     const preco = screen.getByLabelText("Preço de GitHub Team");
     fireEvent.change(preco, { target: { value: "5" } });
     expect(preco.closest("tr")).toHaveTextContent("estimativa");
-    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 1.080,00");
+    expect(screen.getByTestId("mensal-gh")).toHaveTextContent("US$ 100,00");
   });
 
   it("cita a fonte das premissas do GitHub e do câmbio", () => {

@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Revelar } from "../componentes/Revelar";
 import { Secao } from "../componentes/Secao";
 import { CampoNumero, Cita, Escolha, Interruptor } from "../calculadora/Campos";
@@ -12,7 +12,9 @@ import {
   converter,
   formatarMoeda,
   frasesDeCadeiras,
+  jobsSelfHostedAzure,
   normalizar,
+  upgradeGhas,
   type Entradas,
   type Moeda,
   type PlanoGitHub,
@@ -56,9 +58,10 @@ type PropriedadesPainel = {
   resultado: Resultado;
   moeda: Moeda;
   cambio: number;
+  children?: ReactNode;
 };
 
-function Painel({ nome, classe, resultado, moeda, cambio }: PropriedadesPainel) {
+function Painel({ nome, classe, resultado, moeda, cambio, children }: PropriedadesPainel) {
   const valor = (usd: number) => formatarMoeda(converter(usd, moeda, cambio), moeda);
   return (
     <article className={`painel ${classe}`} aria-label={nome}>
@@ -93,6 +96,7 @@ function Painel({ nome, classe, resultado, moeda, cambio }: PropriedadesPainel) 
           ))}
         </ul>
       )}
+      {children}
     </article>
   );
 }
@@ -114,8 +118,15 @@ function CenarioAtualAzure() {
           <dd>{CENARIO_ATUAL_AZURE.pessoas}</dd>
         </div>
         <div>
-          <dt>Jobs paralelos</dt>
-          <dd>{CENARIO_ATUAL_AZURE.jobsParalelos}</dd>
+          <dt>Job Microsoft-hosted</dt>
+          <dd>{CENARIO_ATUAL_AZURE.jobsMicrosoftPagos} pago</dd>
+        </div>
+        <div>
+          <dt>Jobs self-hosted</dt>
+          <dd>
+            {jobsSelfHostedAzure()} ({CENARIO_ATUAL_AZURE.jobsSelfHostedGratis} grátis +{" "}
+            {CENARIO_ATUAL_AZURE.jobsSelfHostedPagos} pagos)
+          </dd>
         </div>
         <div>
           <dt>GHAzDO</dt>
@@ -130,18 +141,23 @@ function CenarioAtualAzure() {
           <Cita {...CITACOES.basicGratis} />
         </li>
         <li>
-          <b>Job Microsoft-hosted:</b> 1 grátis, com limite de 1.800 min/mês e 60 min por execução;
-          pago custa US$ 40/mês, sem limite de minutos.
-          <Cita {...CITACOES.jobMicrosoftGratis} />
+          <b>Job Microsoft-hosted:</b> 1 pago, US$ 40/mês. A compra tira o limite de tempo do job,
+          mas a org continua com 1 job: sem teto mensal de minutos, até 360 min por job.
+          <Cita {...CITACOES.precoJobs} />
+          <Cita {...CITACOES.jobMicrosoftPago} />
+          <Cita {...CITACOES.limitePago} />
         </li>
         <li>
-          <b>Job self-hosted:</b> 1 grátis, sem limite de minutos; extra custa US$ 15/mês.
+          <b>Jobs self-hosted:</b> 1 grátis + 2 pagos a US$ 15/mês cada, sem limite de minutos. A
+          cobrança é por job simultâneo, não por agente registrado.
           <Cita {...CITACOES.jobSelfHostedGratis} />
+          <Cita {...CITACOES.selfHostedPorJob} />
         </li>
       </ul>
       <p className="note">
-        A conta usa o job como Microsoft-hosted grátis, a cota que toda org recebe ao ligar a
-        cobrança. Falta confirmar se o job de hoje é esse, um pago (+US$ 40/mês) ou self-hosted.
+        <b>Não incluído:</b> o custo das máquinas que rodam os agentes self-hosted (servidor ou
+        nuvem, energia e manutenção). A conta mostra só o que o Azure DevOps cobra. Só projetos
+        privados entram na conta.
       </p>
 
       <h4>Cobrança por org</h4>
@@ -183,6 +199,11 @@ export function Custos() {
   const maior = Math.max(azure.mensalUsd, github.mensalUsd, 1);
   const valor = (usd: number) =>
     formatarMoeda(converter(usd, normal.moeda, normal.cambio), normal.moeda);
+  const upgrade = upgradeGhas(entradas, precos);
+  const textoUpgrade =
+    upgrade.produtos === ""
+      ? "escolha Code Security ou Secret Protection"
+      : `+${valor(upgrade.usd)}/mês com ${upgrade.produtos}`;
 
   return (
     <Secao
@@ -202,7 +223,8 @@ export function Custos() {
           <small>Pipeline · Azure DevOps hoje</small>
           <b>{CAPACIDADE_AZURE_ATUAL.titulo}</b>
           <p>{CAPACIDADE_AZURE_ATUAL.detalhe}</p>
-          <Cita {...CITACOES.filaUnica} />
+          <Cita {...CITACOES.concorrencia} />
+          <Cita {...CITACOES.doisTipos} />
         </article>
         <article className="cap gh" aria-label="Capacidade do GitHub">
           <small>Pipeline · GitHub no plano escolhido</small>
@@ -241,7 +263,7 @@ export function Custos() {
                 valor={entradas.minutosMes}
                 aoMudar={mudar("minutosMes")}
                 passo={100}
-                dica="Começa no teto da cota grátis do job de hoje."
+                dica="Ponto de partida sem medição: troque pelo uso real do relatório de consumo do pool."
               />
               <CampoNumero
                 rotulo="% dos minutos em self-hosted"
@@ -285,27 +307,24 @@ export function Custos() {
             <fieldset>
               <legend>Segurança no GitHub</legend>
               <Interruptor rotulo="GHAS ligado" ligado={entradas.ghas} aoMudar={mudar("ghas")}>
-                <small>A segurança roda no pipeline, cobrada por committer ativo.</small>
+                <small>Upgrade opcional, cobrado por committer ativo: {textoUpgrade}.</small>
               </Interruptor>
               <Interruptor
                 rotulo="Code Security"
                 ligado={entradas.codeSecurity}
                 aoMudar={mudar("codeSecurity")}
-                desligado={!entradas.ghas}
               />
               <Interruptor
                 rotulo="Secret Protection"
                 ligado={entradas.secretProtection}
                 aoMudar={mudar("secretProtection")}
-                desligado={!entradas.ghas}
               />
               <CampoNumero
                 rotulo="Committers ativos (90 dias)"
                 valor={entradas.committersAtivos}
                 aoMudar={mudar("committersAtivos")}
                 max={normal.pessoas}
-                desligado={!entradas.ghas}
-                dica="Começa igual ao número de pessoas e acompanha esse campo até ser editado."
+                dica="Começa igual ao número de pessoas e acompanha esse campo até ser editado. Define o preço do GHAS, ligado ou não."
               />
             </fieldset>
 
@@ -362,7 +381,13 @@ export function Custos() {
             resultado={github}
             moeda={normal.moeda}
             cambio={normal.cambio}
-          />
+          >
+            {!normal.ghas && (
+              <p className="upgrade" data-testid="upgrade-ghas">
+                <span className="selo">opcional</span> {textoUpgrade}
+              </p>
+            )}
+          </Painel>
         </div>
       </Revelar>
 

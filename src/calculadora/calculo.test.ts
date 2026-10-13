@@ -11,10 +11,13 @@ import {
   converter,
   formatarMoeda,
   frasesDeCadeiras,
+  MINUTOS_PADRAO,
+  jobsSelfHostedAzure,
   jobsSimultaneos,
-  linhaDoJob,
+  jobsSimultaneosAzure,
   minutosIncluidos,
   normalizar,
+  upgradeGhas,
   type Entradas,
   type Premissas,
   type Resultado,
@@ -42,41 +45,55 @@ function linha(resultado: Resultado, inicio: string) {
 }
 
 describe("Azure DevOps · cenário atual (fixo)", () => {
-  it("é 1 org, 20 pessoas, 1 job paralelo e sem GHAzDO", () => {
+  it("é 1 org, 20 pessoas, 1 job Microsoft-hosted pago, 3 self-hosted e sem GHAzDO", () => {
     expect(CENARIO_ATUAL_AZURE).toEqual({
       organizacoes: 1,
       pessoas: 20,
-      jobsParalelos: 1,
-      tipoJob: "microsoft-gratis",
+      jobsMicrosoftPagos: 1,
+      jobsSelfHostedGratis: 1,
+      jobsSelfHostedPagos: 2,
       ghazdo: false,
     });
+    expect(jobsSelfHostedAzure()).toBe(3);
   });
 
-  it("cobra 15 Basic, dá 5 grátis e o job sai da cota grátis", () => {
+  it("cobra 15 Basic, 1 job Microsoft-hosted e 2 self-hosted extras", () => {
     const azure = calcularAzureAtual();
     expect(azure.linhas.map((item) => item.rotulo)).toEqual([
       "Basic · 15 pagos, 5 grátis",
-      "1 job paralelo · grátis",
+      "Job Microsoft-hosted · 1 pago",
+      "Jobs self-hosted · 2 pagos, 1 grátis",
       "GHAzDO",
     ]);
     expect(linha(azure, "Basic")).toBe(15 * 6);
-    expect(linha(azure, "1 job")).toBe(0);
+    expect(linha(azure, "Job Microsoft-hosted")).toBe(40);
+    expect(linha(azure, "Jobs self-hosted")).toBe(2 * 15);
     expect(linha(azure, "GHAzDO")).toBe(0);
-    expect(azure.mensalUsd).toBe(90);
-    expect(azure.anualUsd).toBe(1080);
-    expect(azure.porPessoaUsd).toBe(4.5);
+    expect(azure.mensalUsd).toBe(160);
+    expect(azure.anualUsd).toBe(1920);
+    expect(azure.porPessoaUsd).toBe(8);
     expect(azure.cadeirasGratis).toBe(5);
     expect(frasesDeCadeiras(azure)).toBe("15 cadeiras pagas para 20 pessoas");
   });
 
-  it("mostra o limite da cota grátis no detalhe do job", () => {
-    expect(linhaDoJob("microsoft-gratis").detalhe).toContain("60 min por execução, 1.800 min/mês");
+  it("o job pago não tem teto mensal de minutos", () => {
+    const job = calcularAzureAtual().linhas[1];
+    expect(job?.detalhe).toContain("Sem limite mensal de minutos, até 360 min por job");
+    expect(job?.detalhe).not.toContain("1.800");
   });
 
-  it("calcula as alternativas do job que ainda precisam ser confirmadas", () => {
-    expect(calcularAzureAtual("microsoft-pago").mensalUsd).toBe(130);
-    expect(calcularAzureAtual("self-hosted-gratis").mensalUsd).toBe(90);
-    expect(linhaDoJob("self-hosted-gratis").detalhe).toContain("Self-hosted");
+  it("avisa que as máquinas self-hosted ficam fora da conta", () => {
+    expect(calcularAzureAtual().avisos.join(" ")).toContain(
+      "Fora da conta: o custo das máquinas dos agentes self-hosted",
+    );
+  });
+
+  it("confere os preços oficiais dos jobs com a página de preços", () => {
+    expect(PRECOS_OFICIAIS.azJobMicrosoft).toBe(40);
+    expect(PRECOS_OFICIAIS.azJobSelfHosted).toBe(15);
+    expect(CITACOES.precoJobs.fonte).toBe(FONTES.azurePrecos);
+    expect(CITACOES.precoJobs.texto).toContain("$40 per extra Microsoft-hosted");
+    expect(CITACOES.precoJobs.texto).toContain("$15 per extra self-hosted");
   });
 
   it("não muda com as entradas nem com os preços do GitHub", () => {
@@ -85,52 +102,74 @@ describe("Azure DevOps · cenário atual (fixo)", () => {
       PREMISSAS_PADRAO,
       { ...PRECOS_OFICIAIS, ghTeam: 99 },
     );
-    expect(outra.azure.mensalUsd).toBe(90);
+    expect(outra.azure.mensalUsd).toBe(160);
   });
 
-  it("descreve a capacidade como 1 job em fila única", () => {
-    expect(CAPACIDADE_AZURE_ATUAL.titulo).toBe("1 job, fila única");
-    expect(CITACOES.filaUnica.texto).toBe(
-      "If you have one parallel job, you can run one pipeline job at a time.",
+  it("descreve a capacidade como até 4 jobs simultâneos, só 1 em máquina da Microsoft", () => {
+    expect(jobsSimultaneosAzure()).toBe(4);
+    expect(CAPACIDADE_AZURE_ATUAL.titulo).toBe("1 hosted + 3 self-hosted = até 4 jobs simultâneos");
+    expect(CAPACIDADE_AZURE_ATUAL.detalhe).toContain("Só 1 em máquina da Microsoft");
+    expect(CITACOES.concorrencia.texto).toBe(
+      "If you have one parallel job, you can run one pipeline job at a time. If you have five parallel jobs, you can run five pipeline jobs at a time.",
     );
+    expect(CITACOES.concorrencia.fonte).toBe(FONTES.azureJobs);
   });
 });
 
 describe("GitHub no padrão", () => {
-  it("parte de 20 pessoas no Team, GHAS ligado e 20 committers ativos", () => {
+  it("parte de 20 pessoas no Team, GHAS desligado e 20 committers ativos", () => {
     expect(ENTRADAS_PADRAO.pessoas).toBe(20);
     expect(ENTRADAS_PADRAO.planoGitHub).toBe("team");
-    expect(ENTRADAS_PADRAO.ghas).toBe(true);
+    expect(ENTRADAS_PADRAO.ghas).toBe(false);
     expect(ENTRADAS_PADRAO.codeSecurity).toBe(true);
     expect(ENTRADAS_PADRAO.secretProtection).toBe(true);
     expect(ENTRADAS_PADRAO.committersAtivos).toBe(20);
-    expect(ENTRADAS_PADRAO.minutosMes).toBe(1800);
+    expect(ENTRADAS_PADRAO.minutosMes).toBe(MINUTOS_PADRAO);
+    expect(MINUTOS_PADRAO).toBe(1800);
   });
 
-  it("cobra 20 assentos, nenhum minuto excedente e GHAS por committer", () => {
+  it("cobra 20 assentos, nenhum minuto excedente e nada de GHAS", () => {
     const github = calcularGitHub(ENTRADAS_PADRAO, PREMISSAS_PADRAO);
     expect(linha(github, "GitHub Team")).toBe(80);
     expect(linha(github, "Actions")).toBe(0);
     expect(github.linhas.find((item) => item.rotulo.startsWith("Actions"))?.detalhe).toContain(
       "1.800 min usados, 3.000 incluídos, 0 excedentes",
     );
-    expect(linha(github, "Code Security")).toBe(20 * 30);
-    expect(linha(github, "Secret Protection")).toBe(20 * 19);
-    expect(github.mensalUsd).toBe(1060);
-    expect(github.anualUsd).toBe(12720);
-    expect(github.porPessoaUsd).toBe(53);
+    expect(github.linhas.map((item) => item.rotulo)).not.toContain("Code Security");
+    expect(github.mensalUsd).toBe(80);
+    expect(github.anualUsd).toBe(960);
+    expect(github.porPessoaUsd).toBe(4);
     expect(github.cadeirasGratis).toBe(0);
+    expect(github.avisos.join(" ")).toContain("CodeQL");
     expect(frasesDeCadeiras(github)).toBe("20 cadeiras pagas para 20 pessoas");
   });
 
-  it("sem GHAS, cobra só assentos e avisa sobre CodeQL em repositório privado", () => {
-    const github = calcularGitHub(entradas({ ghas: false }), PREMISSAS_PADRAO);
-    expect(github.mensalUsd).toBe(80);
-    expect(github.avisos.join(" ")).toContain("CodeQL");
+  it("mostra o preço do GHAS como upgrade, calculado pelos committers", () => {
+    expect(upgradeGhas(ENTRADAS_PADRAO)).toEqual({
+      usd: 20 * (30 + 19),
+      produtos: "Code Security + Secret Protection",
+    });
+    expect(upgradeGhas(entradas({ committersAtivos: 8 })).usd).toBe(8 * 49);
+    expect(upgradeGhas(entradas({ secretProtection: false }))).toEqual({
+      usd: 20 * 30,
+      produtos: "Code Security",
+    });
+    expect(upgradeGhas(entradas({ codeSecurity: false, secretProtection: false }))).toEqual({
+      usd: 0,
+      produtos: "",
+    });
+  });
+
+  it("com GHAS ligado, cobra o upgrade por committer", () => {
+    const github = calcularGitHub(entradas({ ghas: true }), PREMISSAS_PADRAO);
+    expect(linha(github, "Code Security")).toBe(20 * 30);
+    expect(linha(github, "Secret Protection")).toBe(20 * 19);
+    expect(github.mensalUsd).toBe(80 + upgradeGhas(ENTRADAS_PADRAO).usd);
+    expect(github.mensalUsd).toBe(1060);
   });
 
   it("permite só um dos produtos do GHAS", () => {
-    const github = calcularGitHub(entradas({ codeSecurity: false }), PREMISSAS_PADRAO);
+    const github = calcularGitHub(entradas({ ghas: true, codeSecurity: false }), PREMISSAS_PADRAO);
     expect(linha(github, "Code Security")).toBe(0);
     expect(linha(github, "Secret Protection")).toBe(380);
   });

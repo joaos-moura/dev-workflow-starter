@@ -33,9 +33,18 @@ export const CITACOES = {
     texto: "Basic access is free for the first 5 users and paid for 6 or more users.",
     fonte: FONTES.azureAcesso,
   },
-  jobMicrosoftGratis: {
+  precoJobs: {
     texto:
-      "When you enable the free tier, for private projects you get one free job that runs for up to 60 minutes each time, with a monthly limit of 1,800 minutes (30 hours).",
+      "$40 per extra Microsoft-hosted CI/CD parallel job and $15 per extra self-hosted CI/CD parallel job with unlimited minutes",
+    fonte: FONTES.azurePrecos,
+  },
+  jobMicrosoftPago: {
+    texto:
+      "When you purchase your first Microsoft-hosted parallel job, the number of parallel jobs you have in the organization is still one. To run two jobs concurrently, you need to purchase two parallel jobs if you're currently on the free tier. The first purchase only removes the time limits on the first job.",
+    fonte: FONTES.azureJobs,
+  },
+  limitePago: {
+    texto: "Paid tier | 360 minutes per job | No monthly limit",
     fonte: FONTES.azureJobs,
   },
   jobSelfHostedGratis: {
@@ -43,13 +52,19 @@ export const CITACOES = {
       "For private projects, the free tier includes one parallel job plus one parallel job for each active Visual Studio Enterprise subscriber who is a member of your organization.",
     fonte: FONTES.azureJobs,
   },
-  ativarCota: {
+  selfHostedPorJob: {
     texto:
-      "The self-hosted free tier is automatically granted, but you must enable the Microsoft-hosted free tier.",
+      "We charge based on the number of jobs you want to run at a time, not the number of agents registered. There are no time limits on self-hosted jobs.",
     fonte: FONTES.azureJobs,
   },
-  filaUnica: {
-    texto: "If you have one parallel job, you can run one pipeline job at a time.",
+  concorrencia: {
+    texto:
+      "If you have one parallel job, you can run one pipeline job at a time. If you have five parallel jobs, you can run five pipeline jobs at a time.",
+    fonte: FONTES.azureJobs,
+  },
+  doisTipos: {
+    texto:
+      "Azure DevOps Services has two types of parallel jobs: Microsoft-hosted and self-hosted.",
     fonte: FONTES.azureJobs,
   },
   porOrg: {
