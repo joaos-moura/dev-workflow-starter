@@ -37,6 +37,12 @@ jobs:
       - name: Validar template do Backstage
         run: npm run validar:backstage
 
+      - name: Instalar Chromium do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E (Playwright)
+        run: npm run test:e2e
+
       - name: Validar Terraform
         working-directory: infra
         run: |

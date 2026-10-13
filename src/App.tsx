@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { rolarParaHashInicial } from "./ancora";
 import { Arquitetura } from "./secoes/Arquitetura";
 import { Caminho } from "./secoes/Caminho";
 import { ComoUsar } from "./secoes/ComoUsar";
@@ -21,6 +23,8 @@ const LINKS = [
 ] as const;
 
 export function App() {
+  useEffect(() => rolarParaHashInicial(), []);
+
   return (
     <>
       <a className="pular" href="#conteudo">

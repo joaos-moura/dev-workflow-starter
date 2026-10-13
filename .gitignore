@@ -13,3 +13,5 @@ infra/lambda/*.zip
 *.log
 app-config.local.yaml
 backstage-local/
+test-results
+playwright-report
