@@ -1,6 +1,8 @@
 import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { ativarMovimento, CLASSE_MOVIMENTO, PRAZO_DO_OBSERVADOR_MS } from "./movimento";
+import estilos from "./styles.css?raw";
 
 type Retorno = (entradas: Partial<IntersectionObserverEntry>[]) => void;
 
@@ -79,9 +81,10 @@ describe("com movimento", () => {
     vi.useFakeTimers();
     render(<App />);
     const grade = regiao("O desafio").querySelector(".grid");
-    expect(grade).toHaveTextContent("0pedidos de acesso");
+    expect(grade).toHaveTextContent("4pedidos de acesso");
 
     entrarNaTela(grade);
+    expect(grade).toHaveTextContent("0pedidos de acesso");
     act(() => vi.advanceTimersByTime(180 * 2));
     expect(grade).toHaveTextContent("2pedidos de acesso");
     act(() => vi.advanceTimersByTime(180 * 5));
@@ -95,7 +98,7 @@ describe("com movimento", () => {
     const demo = portal.querySelector(".portal");
     const campos = portal.querySelectorAll(".in");
     expect(observados.find((r) => r.alvo === demo && r.limiar === 0.4)).toBeDefined();
-    expect(campos[0]).toHaveTextContent(/^$/);
+    expect(campos[0]).toHaveTextContent("pagamentos-api");
 
     entrarNaTela(demo);
     const avancar = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
@@ -133,18 +136,123 @@ describe("com prefers-reduced-motion", () => {
     simularPreferencia(true);
   });
 
-  it("mostra tudo no estado final, sem observar a rolagem", () => {
+  it("continua revelando e animando o portal, só com movimento mais leve", async () => {
+    vi.useFakeTimers();
     render(<App />);
-    expect(observados).toHaveLength(0);
-    for (const elemento of document.querySelectorAll(".rv")) {
-      expect(elemento).toHaveClass("vis");
+    const titulo = within(regiao("A solução")).getByRole("heading", { level: 2 });
+    expect(observados.find((r) => r.alvo === titulo)).toBeDefined();
+    entrarNaTela(titulo);
+    expect(titulo).toHaveClass("vis");
+
+    const portal = regiao("O portal");
+    entrarNaTela(portal.querySelector(".portal"));
+    await act(() => vi.advanceTimersByTimeAsync(500 + 70 * 3));
+    expect(portal.querySelector(".in")).toHaveTextContent(/^pa/);
+  });
+});
+
+function regrasDoCss(css: string) {
+  const semKeyframes = css.replace(/@keyframes[^{]+\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, "");
+  return [...semKeyframes.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, seletor, corpo]) => ({
+    seletores: (seletor ?? "")
+      .replace(/@media[^{]*$/, "")
+      .split(",")
+      .map((parte) => parte.trim())
+      .filter(Boolean),
+    corpo: corpo ?? "",
+  }));
+}
+
+function blocoReduzido(css: string) {
+  const inicio = css.indexOf("@media (prefers-reduced-motion: reduce)");
+  expect(inicio).toBeGreaterThan(-1);
+  const fim = css.indexOf("\n}\n", inicio);
+  return css.slice(inicio, fim);
+}
+
+describe("o conteúdo nunca fica invisível", () => {
+  it("só esconde para animar depois que o JS liga a classe .mov", () => {
+    const escondem = regrasDoCss(estilos).filter(({ corpo }) => /opacity:\s*0;/.test(corpo));
+    expect(escondem.length).toBeGreaterThan(0);
+    for (const { seletores } of escondem) {
+      for (const seletor of seletores) {
+        expect(seletor.startsWith(".done") || seletor.startsWith(`.${CLASSE_MOVIMENTO} `)).toBe(
+          true,
+        );
+      }
     }
+  });
+
+  it("deixa os blocos visíveis no CSS sem a classe .mov e esconde com ela", () => {
+    const estilo = document.createElement("style");
+    estilo.textContent = estilos.replace(/@import[^;]+;/g, "");
+    document.head.append(estilo);
+    render(<App />);
+    const bloco = regiao("A solução").querySelector(".grid");
+    if (!bloco) throw new Error("Grade da solução ausente.");
+    expect(bloco).not.toHaveClass("vis");
+    expect(getComputedStyle(bloco).opacity).toBe("1");
+
+    document.documentElement.classList.add(CLASSE_MOVIMENTO);
+    expect(getComputedStyle(bloco).opacity).toBe("0");
+
+    document.documentElement.classList.remove(CLASSE_MOVIMENTO);
+    estilo.remove();
+  });
+
+  it("liga .mov só quando há IntersectionObserver", () => {
+    const comObservador = document.createElement("html");
+    expect(ativarMovimento(comObservador)).toBe(true);
+    expect(comObservador).toHaveClass(CLASSE_MOVIMENTO);
+
+    vi.stubGlobal("IntersectionObserver", undefined);
+    const semObservador = document.createElement("html");
+    expect(ativarMovimento(semObservador)).toBe(false);
+    expect(semObservador).not.toHaveClass(CLASSE_MOVIMENTO);
+  });
+
+  it("revela tudo se o observador não responder no prazo", () => {
+    vi.useFakeTimers();
+    simularPreferencia(false);
+    render(<App />);
+    const blocos = [...document.querySelectorAll(".rv")];
+    expect(blocos.length).toBeGreaterThan(20);
+    expect(blocos.filter((bloco) => bloco.classList.contains("vis"))).toHaveLength(0);
+
+    act(() => vi.advanceTimersByTime(PRAZO_DO_OBSERVADOR_MS - 1));
+    expect(document.querySelectorAll(".rv.vis")).toHaveLength(0);
+    act(() => vi.advanceTimersByTime(1));
+    expect(document.querySelectorAll(".rv:not(.vis)")).toHaveLength(0);
 
     const portal = regiao("O portal");
     const textos = [...portal.querySelectorAll(".in")].map((campo) => campo.textContent);
     expect(textos).toEqual(["pagamentos-api", "API · Node", "checkout"]);
-    expect(portal.querySelectorAll(".st.on")).toHaveLength(5);
     expect(portal.querySelector(".done")).toHaveClass("on");
-    expect(regiao("O desafio")).toHaveTextContent("4pedidos de acesso");
+  });
+
+  it("não dispara o fallback com a aba em segundo plano", () => {
+    vi.useFakeTimers();
+    const visibilidade = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    render(<App />);
+    act(() => vi.advanceTimersByTime(PRAZO_DO_OBSERVADOR_MS * 3));
+    expect(document.querySelectorAll(".rv.vis")).toHaveLength(0);
+
+    visibilidade.mockReturnValue("visible");
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+      vi.advanceTimersByTime(PRAZO_DO_OBSERVADOR_MS);
+    });
+    expect(document.querySelectorAll(".rv:not(.vis)")).toHaveLength(0);
+    visibilidade.mockRestore();
+  });
+
+  it("com movimento reduzido, mantém a pipeline animando e não zera tudo", () => {
+    const reduzido = blocoReduzido(estilos);
+    expect(reduzido).not.toMatch(/animation:\s*none\s*!important/);
+    expect(reduzido).not.toMatch(/transition:\s*none\s*!important/);
+    expect(reduzido).not.toMatch(/^\s*\*/m);
+    expect(reduzido).toMatch(/\.lane\.a \.tok \{\s*animation-duration: 6s;/);
+    expect(reduzido).toMatch(/\.lane\.b \.tok \{[^}]*animation: pulso/);
+    expect(reduzido).toMatch(/transition: opacity 0\.3s ease/);
   });
 });
