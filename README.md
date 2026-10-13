@@ -174,7 +174,13 @@ Push para o ECR, Datadog APM e os deploys reais de HML e PRD ficam simulados e m
 
 CD HML, Perf HML e CD PRD só rodam no push da `main`, e só se o job anterior passou. No pull request esses três ficam skipped. O check exigido na `main` continua sendo `CI`, que é outro workflow. Um job skipped não falha o Pipeline e não entra no lugar desse check.
 
-O grupo de concorrência é `pipeline-${{ github.ref }}`. No pull request, uma execução nova cancela a anterior. Na `main`, a execução em andamento segue. Preview e destroy são jobs deste mesmo workflow, no mesmo grupo. O CI usa `ci-${{ github.ref }}` e o Pages usa `pages`.
+O workflow não tem grupo de concorrência. Um **CD HML** esperando aprovação não segura o CI nem o **CD Dev** do push seguinte.
+
+No pull request, detecção, gates, testes e build compartilham `pipeline-ci-<ref>` e a execução nova cancela a anterior. Na `main`, cada execução desses jobs usa o próprio `run_id`, então todas rodam. O workflow `CI` segue em `ci-${{ github.ref }}` e o Pages em `pages`.
+
+Preview e destroy usam `preview-<número do PR>`, sem cancelar a execução em andamento, para o Terraform do mesmo preview não correr junto. Outro preview que ainda esteja só na fila cede o lugar ao mais novo.
+
+**CD Dev** usa `deploy-dev-<ref>` com `queue: max`: os applies entram na ordem, até cem, e não se cancelam. **CD HML** e **Perf HML** compartilham `deploy-hml-<ref>`. **CD PRD** usa `deploy-prd-<ref>`. Nos dois, `cancel-in-progress` é false. A aprovação que já está na tela continua. Um HML ou PRD mais novo, ainda só na fila, substitui o anterior que também só esperava. CI e **CD Dev** não entram nesses grupos.
 
 O mesmo workflow aceita `workflow_dispatch` na `main`. O template do Backstage usa esse disparo. O CD Dev aplica no push e nesse disparo. CD HML, Perf HML e CD PRD não rodam no disparo.
 
