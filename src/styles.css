@@ -2018,7 +2018,39 @@ footer a {
     min-width: 0;
   }
 
+  .tbl.precos,
+  .precos tbody {
+    display: block;
+  }
+
+  .precos thead {
+    display: none;
+  }
+
+  .precos tbody tr {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 6px 12px;
+    align-items: center;
+    padding: 12px;
+  }
+
+  .precos tbody tr + tr {
+    border-top: 1px solid var(--line);
+  }
+
+  .precos tbody th,
+  .precos td {
+    padding: 0;
+    border-top: 0;
+  }
+
+  .precos tbody th {
+    grid-column: 1 / -1;
+  }
+
   .precos td:last-child {
+    grid-column: 1 / -1;
     white-space: normal;
   }
 }
