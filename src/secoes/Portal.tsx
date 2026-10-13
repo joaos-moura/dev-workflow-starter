@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Secao } from "../componentes/Secao";
-import { useRevelado, useSemAnimacao } from "../movimento";
+import { observar, useRevelado, useSemObservador } from "../movimento";
 
 const CAMPOS = [
   { rotulo: "Nome do serviço", valor: "pagamentos-api" },
@@ -64,15 +64,16 @@ function classeDoPasso(estado: EstadoPasso): string {
   }
 }
 
-function useCicloDoPortal(semAnimacao: boolean) {
+function useCicloDoPortal(semObservador: boolean) {
   const demoRef = useRef<HTMLDivElement>(null);
   const janelaRef = useRef<HTMLDivElement>(null);
   const botaoRef = useRef<HTMLSpanElement>(null);
-  const [quadro, setQuadro] = useState<Quadro>(INICIAL);
+  // Começa no estado final: se o ciclo nunca rodar, o formulário continua legível.
+  const [quadro, setQuadro] = useState<Quadro>(FINAL);
 
   useEffect(() => {
     const demo = demoRef.current;
-    if (semAnimacao || !demo) return;
+    if (semObservador || !demo) return;
 
     let ativo = true;
     let visivel = false;
@@ -140,28 +141,29 @@ function useCicloDoPortal(semAnimacao: boolean) {
       if (visivel) void ciclo();
     }
 
-    const observador = new IntersectionObserver(
-      ([entrada]) => {
-        visivel = entrada?.isIntersecting ?? false;
+    const pararDeObservar = observar(
+      demo,
+      LIMIAR_DO_CICLO,
+      (agora) => {
+        visivel = agora;
         if (visivel && !rodando) void ciclo();
       },
-      { threshold: LIMIAR_DO_CICLO },
+      () => {},
     );
-    observador.observe(demo);
 
     return () => {
       ativo = false;
-      observador.disconnect();
+      pararDeObservar();
       relogios.forEach((id) => window.clearTimeout(id));
     };
-  }, [semAnimacao]);
+  }, [semObservador]);
 
-  return { demoRef, janelaRef, botaoRef, quadro: semAnimacao ? FINAL : quadro };
+  return { demoRef, janelaRef, botaoRef, quadro: semObservador ? FINAL : quadro };
 }
 
 export function Portal() {
-  const semAnimacao = useSemAnimacao();
-  const { demoRef, janelaRef, botaoRef, quadro } = useCicloDoPortal(semAnimacao);
+  const semObservador = useSemObservador();
+  const { demoRef, janelaRef, botaoRef, quadro } = useCicloDoPortal(semObservador);
   const revelado = useRevelado(demoRef);
 
   return (

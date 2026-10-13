@@ -925,17 +925,17 @@ footer a {
 }
 
 /* Reveal on scroll */
+/* Visível por padrão. Só esconde para animar quando o JS ligou a classe .mov no
+   <html>; se o observador falhar, o fallback de JS adiciona .vis mesmo assim. */
 .rv {
-  opacity: 0;
-  transform: translateY(16px);
   transition:
     opacity 0.6s ease,
     transform 0.6s ease;
 }
 
-.rv.vis {
-  opacity: 1;
-  transform: none;
+.mov .rv:not(.vis) {
+  opacity: 0;
+  transform: translateY(16px);
 }
 
 /* Padrão 360° */
@@ -1216,12 +1216,11 @@ footer a {
   border-radius: 50%;
   background: conic-gradient(from 0deg, rgba(79, 70, 229, 0.18), transparent 25%);
   animation: sp 6s linear infinite;
-  opacity: 0;
   transition: opacity 0.6s;
 }
 
-.rv.vis .rd .sw {
-  opacity: 1;
+.mov .rv:not(.vis) .rd .sw {
+  opacity: 0;
 }
 
 .rd .ln {
@@ -1240,12 +1239,13 @@ footer a {
   height: 12px;
   margin: -6px;
   border-radius: 50%;
-  transform: scale(0);
-  transition: transform 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+  transition:
+    transform 0.45s cubic-bezier(0.3, 1.6, 0.5, 1),
+    opacity 0.3s ease;
 }
 
-.rv.vis .bl {
-  transform: scale(1);
+.mov .rv:not(.vis) .bl {
+  transform: scale(0);
 }
 
 .bl.a {
@@ -1365,16 +1365,14 @@ footer a {
 }
 
 .tbl tbody tr {
-  opacity: 0;
-  transform: translateX(-12px);
   transition:
     opacity 0.45s,
     transform 0.45s;
 }
 
-.rv.vis .tbl tbody tr {
-  opacity: 1;
-  transform: none;
+.mov .rv:not(.vis) .tbl tbody tr {
+  opacity: 0;
+  transform: translateX(-12px);
 }
 
 .asterisco {
@@ -1504,34 +1502,59 @@ footer a {
   }
 }
 
+/* Movimento reduzido: troca deslocamento grande por fades curtos, sem desligar
+   tudo. A pipeline continua animando, devagar e sem tremer. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition: none !important;
+  header::before,
+  header::after,
+  .rd .sw {
+    animation: none;
   }
 
-  .arrow::before,
   .rd .sw {
     display: none;
   }
 
   .rv,
   .tbl tbody tr {
-    opacity: 1 !important;
-    transform: none !important;
+    transition: opacity 0.3s ease;
+  }
+
+  .mov .rv:not(.vis),
+  .mov .rv:not(.vis) .tbl tbody tr {
+    transform: none;
   }
 
   .bl {
-    transform: scale(1) !important;
+    transition: opacity 0.3s ease;
+  }
+
+  .mov .rv:not(.vis) .bl {
+    transform: none;
+    opacity: 0;
+  }
+
+  .mouse {
+    transition: opacity 0.3s ease;
+  }
+
+  .go.press,
+  .done {
+    transform: none;
   }
 
   .lane.b .tok {
     left: calc(25% + 30px);
+    animation: pulso 2.4s ease-in-out infinite;
   }
 
   .lane.a .tok {
-    left: calc(100% - 42px);
+    animation-duration: 6s;
+  }
+}
+
+@keyframes pulso {
+  50% {
+    opacity: 0.45;
   }
 }

@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Secao } from "../componentes/Secao";
-import { useRevelado, useSemAnimacao } from "../movimento";
+import { useRevelado, useSemObservador } from "../movimento";
 
 const PASSO_DO_CONTADOR_MS = 180;
 
 function Contador({ valor, ativo }: { valor: number; ativo: boolean }) {
-  const semAnimacao = useSemAnimacao();
+  const semObservador = useSemObservador();
   const [atual, setAtual] = useState(0);
 
   useEffect(() => {
-    if (semAnimacao || !ativo || valor === 0) return;
+    if (semObservador || !ativo || valor === 0) return;
     let n = 0;
     const relogio = setInterval(() => {
       n += 1;
@@ -17,9 +17,11 @@ function Contador({ valor, ativo }: { valor: number; ativo: boolean }) {
       if (n >= valor) clearInterval(relogio);
     }, PASSO_DO_CONTADOR_MS);
     return () => clearInterval(relogio);
-  }, [ativo, semAnimacao, valor]);
+  }, [ativo, semObservador, valor]);
 
-  return <span>{semAnimacao ? valor : atual}</span>;
+  // Antes da contagem começar, o número já aparece com o valor final.
+  const contando = ativo && !semObservador;
+  return <span>{contando ? atual : valor}</span>;
 }
 
 export function Desafio() {
