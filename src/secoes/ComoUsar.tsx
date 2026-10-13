@@ -3,7 +3,13 @@ import { Secao } from "../componentes/Secao";
 
 export function ComoUsar() {
   return (
-    <Secao id="usar" numero="11" rotulo="Como usar" titulo="Do template ao preview em seis passos.">
+    <Secao
+      id="usar"
+      numero="12"
+      rotulo="Como usar"
+      titulo="Do template ao preview em seis passos."
+      alt
+    >
       <Revelar className="steps">
         <ol>
           <li>

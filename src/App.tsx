@@ -4,6 +4,7 @@ import { Arquitetura } from "./secoes/Arquitetura";
 import { Caminho } from "./secoes/Caminho";
 import { ComoUsar } from "./secoes/ComoUsar";
 import { Contas } from "./secoes/Contas";
+import { Custos } from "./secoes/Custos";
 import { Desafio } from "./secoes/Desafio";
 import { Futuro } from "./secoes/Futuro";
 import { Padrao } from "./secoes/Padrao";
@@ -19,6 +20,7 @@ const LINKS = [
   ["#arquitetura", "Arquitetura"],
   ["#pipeline", "Pipeline"],
   ["#radar", "Radar"],
+  ["#custos", "Custos"],
   ["#usar", "Como usar"],
 ] as const;
 
@@ -77,6 +79,7 @@ export function App() {
         <Pipeline />
         <Radar />
         <Futuro />
+        <Custos />
         <ComoUsar />
       </main>
       <footer>

@@ -25,6 +25,7 @@ describe("estrutura da página", () => {
       "#arquitetura",
       "#pipeline",
       "#radar",
+      "#custos",
       "#usar",
       "#usar",
     ]);
@@ -50,8 +51,11 @@ describe("estrutura da página", () => {
     );
   });
 
-  it("segue a ordem final das onze seções", () => {
-    const rotulos = screen.getAllByRole("region").map((secao) => secao.getAttribute("aria-label"));
+  it("segue a ordem final das doze seções", () => {
+    const rotulos = screen
+      .getAllByRole("region")
+      .filter((secao) => secao.tagName === "SECTION")
+      .map((secao) => secao.getAttribute("aria-label"));
     expect(rotulos).toEqual([
       "O desafio",
       "A solução",
@@ -63,12 +67,26 @@ describe("estrutura da página", () => {
       "Pipeline",
       "Radar",
       "Hoje x Futuro",
+      "Custos",
       "Como usar",
     ]);
-    const numeros = screen
-      .getAllByRole("region")
-      .map((secao) => secao.querySelector(".eyebrow")?.textContent?.slice(0, 2));
-    expect(numeros).toEqual(["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"]);
+    const numeros = [...document.querySelectorAll("section .eyebrow")].map((eyebrow) =>
+      eyebrow.textContent?.slice(0, 2),
+    );
+    expect(numeros).toEqual([
+      "01",
+      "02",
+      "03",
+      "04",
+      "05",
+      "06",
+      "07",
+      "08",
+      "09",
+      "10",
+      "11",
+      "12",
+    ]);
   });
 
   it("cita a licença MIT do repositório no rodapé", () => {

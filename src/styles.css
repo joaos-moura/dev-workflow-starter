@@ -1560,3 +1560,622 @@ footer a {
     opacity: 0.45;
   }
 }
+
+/* Custos */
+.calc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 24px;
+  margin-top: 40px;
+  align-items: start;
+}
+
+.calc-form,
+.calc-campos {
+  display: grid;
+  gap: 16px;
+}
+
+.capacidade {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.cap {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: #fff;
+  padding: 20px;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.cap.gh {
+  border-color: #d9dcff;
+  background: var(--accent-soft);
+}
+
+.cap small {
+  font: 600 12px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink3);
+}
+
+.cap b {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cap.gh b {
+  color: var(--accent);
+}
+
+.cap p {
+  font-size: 14px;
+  color: var(--ink2);
+}
+
+.cita {
+  margin: 6px 0 0;
+  padding: 6px 0 6px 12px;
+  border-left: 2px solid var(--line);
+  font-size: 12.5px;
+  color: var(--ink2);
+  line-height: 1.5;
+}
+
+.cita p {
+  font-style: italic;
+}
+
+.cita a {
+  font: 12px var(--mono);
+  color: var(--accent);
+}
+
+.fixo {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--bg2);
+  padding: 18px 20px 20px;
+}
+
+.fixo h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fixo h4 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 18px;
+}
+
+.fixo .note {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.fixo dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.fixo dl div {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.fixo dt {
+  font-size: 12px;
+  color: var(--ink3);
+}
+
+.fixo dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.gratis {
+  list-style: none;
+  padding: 0;
+  margin-top: 8px;
+  display: grid;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--ink2);
+}
+
+.gratis b {
+  color: var(--ink);
+}
+
+.fixo-valor {
+  font: 500 14px var(--mono);
+  color: var(--ink);
+}
+
+.calc-campos > fieldset {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: #fff;
+  padding: 18px 20px 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+  min-width: 0;
+}
+
+.calc-campos > fieldset > legend {
+  font: 600 12px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink3);
+  padding: 0 6px;
+}
+
+.campo {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+
+.campo label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink2);
+}
+
+.campo input,
+.campo select,
+.precos input {
+  font: 500 15px var(--sans);
+  color: var(--ink);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 100%;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
+}
+
+.campo input:focus,
+.campo select:focus,
+.precos input:focus {
+  border-color: var(--accent);
+  background: #fff;
+  outline: none;
+}
+
+.campo input:disabled {
+  color: var(--ink3);
+}
+
+.campo small,
+.chave small {
+  font-size: 12px;
+  color: var(--ink3);
+  line-height: 1.45;
+}
+
+.campo small a,
+.chave small a,
+.precos a {
+  color: var(--accent);
+}
+
+.escolha {
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.escolha legend {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink2);
+  margin-bottom: 4px;
+}
+
+.escolha > div {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--bg2);
+  width: fit-content;
+}
+
+.escolha label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink2);
+  padding: 5px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.escolha label.on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(11, 13, 18, 0.08);
+}
+
+.escolha input,
+.chave input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.escolha label:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.chave {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px;
+  align-items: start;
+  cursor: pointer;
+  position: relative;
+}
+
+.chave.off {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.chave .trilho {
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--line);
+  position: relative;
+  margin-top: 1px;
+  transition: background-color 0.2s;
+}
+
+.chave .trilho::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(11, 13, 18, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.chave input:checked + .trilho {
+  background: var(--accent);
+}
+
+.chave input:checked + .trilho::after {
+  transform: translateX(14px);
+}
+
+.chave input:focus-visible + .trilho {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.chave .txt {
+  display: grid;
+  gap: 2px;
+}
+
+.chave b {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.calc-campos .chave,
+.calc-campos .escolha {
+  grid-column: 1 / -1;
+}
+
+.calc-res {
+  display: grid;
+  gap: 16px;
+  position: sticky;
+  top: 84px;
+}
+
+.barras {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: #fff;
+  padding: 18px 20px;
+  display: grid;
+  gap: 10px;
+}
+
+.barras > div {
+  display: grid;
+  grid-template-columns: 104px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--ink2);
+}
+
+.barras i {
+  display: block;
+  height: 10px;
+  border-radius: 999px;
+  min-width: 4px;
+  transition: width 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.barras i.az {
+  background: var(--ink2);
+}
+
+.barras i.gh {
+  background: var(--accent);
+}
+
+.barras b {
+  font: 600 13px var(--mono);
+  color: var(--ink);
+  min-width: 92px;
+  text-align: right;
+}
+
+.painel {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: #fff;
+  padding: 20px;
+}
+
+.painel.gh {
+  border-color: #d9dcff;
+}
+
+.painel h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.painel .total {
+  margin-top: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.painel .total b {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.painel .total small,
+.painel .anual {
+  font-size: 13px;
+  color: var(--ink3);
+}
+
+.painel .cadeiras {
+  margin-top: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg2);
+}
+
+.painel.gh .cadeiras {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.painel .linhas {
+  list-style: none;
+  padding: 0;
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.painel .linhas li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.painel .linhas span {
+  display: grid;
+}
+
+.painel .linhas small {
+  font: 12px var(--mono);
+  color: var(--ink3);
+}
+
+.painel .linhas b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.painel .avisos {
+  list-style: none;
+  padding: 0;
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.painel .upgrade {
+  margin-top: 12px;
+  padding: 8px 10px;
+  border: 1px dashed #d9dcff;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.painel .avisos li {
+  font-size: 12.5px;
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.selo {
+  display: inline-block;
+  font: 600 11px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-left: 4px;
+  color: var(--ink2);
+  background: var(--line);
+}
+
+.selo.ok {
+  color: var(--ok);
+  background: var(--ok-soft);
+  margin-left: 0;
+}
+
+.selo.est {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.precos caption {
+  caption-side: top;
+  text-align: left;
+  font: 600 12px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink3);
+  padding: 0 0 10px;
+}
+
+.precos tbody th small {
+  display: block;
+  font: 12px var(--mono);
+  color: var(--ink3);
+}
+
+.precos input {
+  width: 96px;
+  font: 500 14px var(--mono);
+  padding: 5px 8px;
+}
+
+.precos td:last-child {
+  white-space: nowrap;
+}
+
+#custos > .wrap > .note {
+  margin-top: 16px;
+}
+
+@media (max-width: 860px) {
+  .calc {
+    grid-template-columns: 1fr;
+  }
+
+  .calc-res {
+    position: static;
+  }
+
+  .calc-campos > fieldset,
+  .capacidade {
+    grid-template-columns: 1fr;
+  }
+
+  .fixo dl {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .barras > div {
+    grid-template-columns: 84px 1fr auto;
+  }
+
+  .barras b {
+    min-width: 0;
+  }
+
+  .tbl.precos,
+  .precos tbody {
+    display: block;
+  }
+
+  .precos thead {
+    display: none;
+  }
+
+  .precos tbody tr {
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 6px 12px;
+    align-items: center;
+    padding: 12px;
+  }
+
+  .precos tbody tr + tr {
+    border-top: 1px solid var(--line);
+  }
+
+  .precos tbody th,
+  .precos td {
+    padding: 0;
+    border-top: 0;
+  }
+
+  .precos tbody th {
+    grid-column: 1 / -1;
+  }
+
+  .precos td:last-child {
+    grid-column: 1 / -1;
+    white-space: normal;
+  }
+}
+
+/* Movimento reduzido na calculadora: os valores mudam na hora, sem deslizar. */
+@media (prefers-reduced-motion: reduce) {
+  .barras i {
+    transition: opacity 0.3s ease;
+  }
+
+  .chave .trilho::after {
+    transition: none;
+  }
+}
