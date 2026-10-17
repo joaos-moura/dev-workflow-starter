@@ -30,8 +30,8 @@ await expect(secao.getByText("CD Dev")).toBeVisible();
 No YAML, não há Playwright: rode o validador.
 
 ```bash
-npm run validar:pipeline
-# ou: node .github/scripts/validar-concorrencia-pipeline.mjs
+npm run validar:workflows
+# ou: node .github/scripts/validar-workflows.mjs .
 ```
 
 Checagens de um PR (só leitura):
@@ -43,9 +43,9 @@ Checagens de um PR (só leitura):
 Num PR **precisam passar**: CI, CodeQL, eslint, reviewdog, Detecção, Gates,
 Testes e cobertura, Build e scan, Preview PR, CD Dev.
 
-**Skipped**: CD HML, Perf HML, CD PRD. O teste
-`src/invariantes/pipeline.test.ts` quebra se o `if` deixar de ser
-`push` + `refs/heads/main`.
+**Skipped**: CD HML, Perf HML, CD PRD. O `if` deles é `push` + `refs/heads/main`.
+O R1 de `validar:workflows` quebra se o `concurrency` voltar ao topo do
+`pipeline.yml` enquanto esses jobs tiverem `environment: hml` ou `prd`.
 
 ## Gotchas
 

@@ -12,8 +12,8 @@ description: >-
 Pirâmide invertida. Cada degrau de baixo é um comando; texto só entra quando o
 comando não dá conta.
 
-1. **Código, tipos e invariantes** — o caminho fácil é o certo (`src/invariantes/`,
-   `validar:pipeline`).
+1. **Código, tipos e invariantes** — o caminho fácil é o certo
+   (`validar:movimento`, `validar:workflows`).
 2. **Análise estática** — `verificar.sh` (lint, testes, CI local).
 3. **Prosa mínima** — `features/` diz o que clicar, não o que deveria ser verdade.
 4. **Revisão humana por último.**
@@ -106,16 +106,16 @@ Não apaga `evidence/`.
 
 Todos a partir da raiz do repo:
 
-| Comando                            | O que faz                                            |
-| ---------------------------------- | ---------------------------------------------------- |
-| `scripts/verificar.sh`             | lint + `npm test` + `validar:pipeline` + build + e2e |
-| `scripts/launch.sh`                | build + preview 4173                                 |
-| `node scripts/doctor.mjs`          | leitura do preview                                   |
-| `node scripts/drive.mjs <recurso>` | Playwright numa superfície                           |
-| `node scripts/evidence.mjs`        | capturas 1440/390                                    |
-| `scripts/e2e.sh`                   | `npm run test:e2e` (âncoras + movimento)             |
-| `scripts/cleanup.sh`               | mata o preview deste launch                          |
-| `scripts/checagens-pr.sh <n>`      | `gh pr checks` só leitura                            |
+| Comando                            | O que faz                                               |
+| ---------------------------------- | ------------------------------------------------------- |
+| `scripts/verificar.sh`             | lint + `npm test` + `validar:invariantes` + build + e2e |
+| `scripts/launch.sh`                | build + preview 4173                                    |
+| `node scripts/doctor.mjs`          | leitura do preview                                      |
+| `node scripts/drive.mjs <recurso>` | Playwright numa superfície                              |
+| `node scripts/evidence.mjs`        | capturas 1440/390                                       |
+| `scripts/e2e.sh`                   | `npm run test:e2e` (âncoras + movimento)                |
+| `scripts/cleanup.sh`               | mata o preview deste launch                             |
+| `scripts/checagens-pr.sh <n>`      | `gh pr checks` só leitura                               |
 
 `scripts/` acima = `.cursor/skills/verify-dev-workflow-starter/scripts/`.
 
@@ -124,18 +124,21 @@ Todos a partir da raiz do repo:
 ```bash
 npm run lint          # eslint . && prettier --check .
 npm test              # vitest run (jsdom, css: true)
-npm run validar:pipeline
-npm run build         # tsc --noEmit && vite build
-npm run test:e2e      # Playwright 1440 e 390, preview na 4173
+npm run validar:movimento   # postcss em src/styles.css (M1, M2)
+npm run validar:workflows   # YAML de .github/ (R1, R2)
+npm run validar:invariantes # os dois + node --test
+npm run build               # tsc --noEmit && vite build
+npm run test:e2e            # Playwright 1440 e 390, preview na 4173
 ```
 
 Invariantes que já não são texto:
 
-- `src/invariantes/estilo.test.ts` — nenhum `*` / `*::before` / `*::after` com
-  `animation:none` ou `transition:none` (bug #12).
-- `.github/scripts/validar-concorrencia-pipeline.mjs` +
-  `src/invariantes/pipeline.test.ts` — sem `concurrency` no workflow; deploys com
-  grupo próprio e `cancel-in-progress: false`; HML/PRD só no push da main (bug #15).
+- `.github/scripts/validar-movimento.mjs` — M1: nenhum `*` com `animation`/`transition: none`
+  (ou `!important`) dentro de `prefers-reduced-motion`. M2: `.rv` não começa com
+  `opacity: 0` sem a guarda `.mov` (bug #12).
+- `.github/scripts/validar-workflows.mjs` — R1: sem `concurrency` no topo do
+  workflow quando há job com `environment: hml|prd`. R2: composite action não
+  lê `vars.`/`secrets.` (bugs #15 e #2).
 - `e2e/ancora.e2e.ts` — carga com hash, seção sob a barra, h2 visível, reduce sem
   rolagem animada.
 - `e2e/movimento.e2e.ts` — com reduce, `#pipeline h2` visível e
@@ -154,8 +157,9 @@ Detecção de tecnologia, Gates de segurança, Testes e cobertura, Build e scan,
 Preview PR, CD Dev (inerte no PR, termina verde).
 
 Estes **precisam aparecer skipped**: CD HML, Perf HML, CD PRD — o `if` deles é
-`github.event_name == 'push' && github.ref == 'refs/heads/main'`. Isso é
-testado em `src/invariantes/pipeline.test.ts`. Nunca aprove o environment.
+`github.event_name == 'push' && github.ref == 'refs/heads/main'`. O R1 do
+`validar:workflows` quebra se o concurrency voltar para o topo do
+`pipeline.yml`. Nunca aprove o environment.
 
 ## Ordem de um ciclo
 

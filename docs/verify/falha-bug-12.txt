@@ -1,19 +1,15 @@
-# Prova: o teste de estilo falha no seletor universal do #12
+# Prova M1/M2 — CSS do commit 32cfce7 (antes do #12)
 
-Comando (com o CSS antigo recolocado só neste passo, depois revertido):
+    git show 32cfce7:src/styles.css > /tmp/st-32cfce7.css
+    npm run validar:movimento -- /tmp/st-32cfce7.css
+    # equivalente: node .github/scripts/validar-movimento.mjs /tmp/st-32cfce7.css
 
-    npx vitest run src/invariantes/estilo.test.ts
+== 32cfce7 feat: reconstrói o site no design aprovado (#11)
+✗ /tmp/st-32cfce7.css:1511: '*, *::before, *::after { animation: none !important }' em prefers-reduced-motion desliga todo o movimento. Correção: troque deslocamento por fade curto nos seletores que se movem (ver o bloco de reduced-motion em src/styles.css desde o #12).
+✗ /tmp/st-32cfce7.css:1512: '*, *::before, *::after { transition: none !important }' em prefers-reduced-motion desliga todo o movimento. Correção: troque deslocamento por fade curto nos seletores que se movem (ver o bloco de reduced-motion em src/styles.css desde o #12).
+✗ /tmp/st-32cfce7.css:929: '.rv' começa invisível sem a guarda '.mov'. Correção: escreva '.mov .rv:not(.vis) { opacity: 0 }' e ligue '.mov' via ativarMovimento() (src/movimento.ts).
+exit=1
 
-Trecho da falha:
-
-    FAIL  src/invariantes/estilo.test.ts > seletor universal não zera movimento > aceita o styles.css atual
-    AssertionError: expected [Function] to not throw an error but 'Error: seletor universal com animatio…' was thrown
-
-    + Received:
-    "Error: seletor universal com animation:none ou transition:none:
-    * { animation: none !important; transition: none !important; }
-    *::before { animation: none !important; transition: none !important; }
-    *::after { animation: none !important; transition: none !important; }"
-
-     ❯ src/invariantes/estilo.test.ts:16:46
-         expect(() => validarEstilo(estilos)).not.toThrow();
+== 4834462 fix: movimento leve com prefers-reduced-motion … (#12)
+✓ movimento ok
+exit=0

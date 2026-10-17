@@ -32,7 +32,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      - run: npm run validar:pipeline
+      - run: npm run validar:invariantes
       - run: npm run build
 
       - name: Validar template do Backstage

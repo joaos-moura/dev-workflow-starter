@@ -32,9 +32,10 @@ const nome = await page
 expect(nome).not.toBe("none");
 ```
 
-Isso vive em `e2e/movimento.e2e.ts` e em `drive.mjs movimento`. O CSS é
-varrido em `src/invariantes/estilo.test.ts`: qualquer `* { animation: none }`
-quebra o teste.
+Isso vive em `e2e/movimento.e2e.ts` e em `drive.mjs movimento`. O CSS passa no
+PostCSS `npm run validar:movimento`: qualquer `* { animation: none }` dentro
+de `prefers-reduced-motion`, ou `.rv { opacity: 0 }` sem `.mov`, quebra o
+script.
 
 ## Gotchas
 

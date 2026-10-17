@@ -116,8 +116,8 @@ jobs:
       - name: Vitest com cobertura
         run: npx vitest run --coverage
 
-      - name: Concorrência por deploy
-        run: npm run validar:pipeline
+      - name: Invariantes de movimento e workflows
+        run: npm run validar:invariantes
 
   build:
     name: Build e scan

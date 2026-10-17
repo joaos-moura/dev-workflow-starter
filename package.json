@@ -13,7 +13,9 @@
     "test": "vitest run",
     "lint": "eslint . && prettier --check .",
     "validar:backstage": "node .github/scripts/validar-template-backstage.mjs",
-    "validar:pipeline": "node .github/scripts/validar-concorrencia-pipeline.mjs",
+    "validar:movimento": "node .github/scripts/validar-movimento.mjs src/styles.css",
+    "validar:workflows": "node .github/scripts/validar-workflows.mjs .",
+    "validar:invariantes": "npm run validar:movimento && npm run validar:workflows && node --test .github/scripts/validar-movimento.test.mjs .github/scripts/validar-workflows.test.mjs",
     "format": "prettier --write .",
     "test:e2e": "playwright test"
   },
@@ -38,6 +40,7 @@
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.13.0",
     "jsdom": "^30.1.2",
+    "postcss": "^8.5.30",
     "prettier": "^3.9.10",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.71.2",
