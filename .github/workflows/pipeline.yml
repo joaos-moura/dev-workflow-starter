@@ -116,6 +116,9 @@ jobs:
       - name: Vitest com cobertura
         run: npx vitest run --coverage
 
+      - name: Invariantes de movimento e workflows
+        run: npm run validar:invariantes
+
   build:
     name: Build e scan
     needs: testes
@@ -293,6 +296,7 @@ jobs:
       contents: read
     concurrency:
       group: deploy-dev-${{ github.ref }}
+      cancel-in-progress: false
       queue: max
     runs-on: ubuntu-latest
     steps:

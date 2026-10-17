@@ -15,3 +15,5 @@ app-config.local.yaml
 backstage-local/
 test-results
 playwright-report
+.cursor/skills/verify-dev-workflow-starter/.run
+.cursor/skills/verify-dev-workflow-starter/evidence/*.png

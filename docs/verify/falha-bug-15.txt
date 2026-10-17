@@ -1,0 +1,32 @@
+# Prova R1 — pipeline.yml dos commits antes do #15
+# Prova R2 — porta-aws do commit ed76f3d (antes do #2)
+
+    dest=/tmp/wf-<rev>
+    git show <rev>:.github/workflows/pipeline.yml > $dest/.github/workflows/pipeline.yml
+    git show <rev>:.github/actions/porta-aws/action.yml > $dest/.github/actions/porta-aws/action.yml
+    npm run validar:workflows -- $dest
+    # equivalente: node .github/scripts/validar-workflows.mjs $dest
+
+== ed76f3d feat: publica o starter … (#1)
+✗ …/porta-aws/action.yml:15: composite action lê 'vars.' — o runner rejeita ('Unrecognized named-value'). Correção: declare um input e passe ${{ vars.X }} no 'with:' do workflow (ver porta-aws desde o #2).
+exit=1
+
+== 86b08c4 fix: lê AWS_ROLE_ARN fora da composite action (#2)
+✓ workflows ok
+exit=0
+
+== 6a68938 feat: pipeline de demonstração em estágios (#9)
+✗ …/pipeline.yml: 'concurrency' no topo do workflow com job(s) que esperam aprovação (cd_hml, perf_hml, cd_prd). Um run parado na aprovação cancela o próximo push. Correção: tire o concurrency do topo e declare por job — deploy-<ambiente>-${{ github.ref }} (queue: max no dev, cancel-in-progress: false em HML/PRD), como no pipeline.yml desde o #15.
+exit=1
+
+== 32cfce7 feat: reconstrói o site no design aprovado (#11)
+✗ …/pipeline.yml: 'concurrency' no topo do workflow com job(s) que esperam aprovação (cd_hml, perf_hml, cd_prd). …
+exit=1
+
+== 11ed946 fix: rola até a âncora na primeira carga … (#14)
+✗ …/pipeline.yml: 'concurrency' no topo do workflow com job(s) que esperam aprovação (cd_hml, perf_hml, cd_prd). …
+exit=1
+
+== e623243 fix: concorrência por deploy, sem travar o CI (#15)
+✓ workflows ok
+exit=0
