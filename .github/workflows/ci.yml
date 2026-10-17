@@ -38,15 +38,29 @@ jobs:
       - name: Validar template do Backstage
         run: npm run validar:backstage
 
-      - name: Instalar Chromium do Playwright
-        run: npx playwright install --with-deps chromium
-
-      - name: E2E (Playwright)
-        run: npm run test:e2e
-
       - name: Validar Terraform
         working-directory: infra
         run: |
           terraform fmt -check -recursive
           terraform init -backend=false -input=false
           terraform validate
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Instalar Chromium do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E (Playwright)
+        run: npm run test:e2e

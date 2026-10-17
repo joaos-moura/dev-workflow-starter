@@ -1,0 +1,73 @@
+# Prova do e2e/movimento.e2e.ts contra o CSS do 32cfce7 (antes do #12)
+
+Só o CSS muda. Os testes e o restante do src ficam os da HEAD, porque
+e2e/movimento.e2e.ts não existia naquele commit.
+
+## Reproduzir a falha
+
+    git show 32cfce7:src/styles.css > src/styles.css
+    npm run build
+    npm run test:e2e -- e2e/movimento.e2e.ts
+    echo exit=$?
+
+Saída real (4 failed, exit=1):
+
+    Running 4 tests using 2 workers
+      ✘  [desktop] › e2e/movimento.e2e.ts:6:3 › movimento reduzido › o conteúdo aparece e a pipeline continua animando
+      ✘  [mobile]  › e2e/movimento.e2e.ts:6:3 › movimento reduzido › o conteúdo aparece e a pipeline continua animando
+      ✘  [desktop] › e2e/movimento.e2e.ts:17:1 › sem a classe .mov o conteúdo permanece visível
+      ✘  [mobile]  › e2e/movimento.e2e.ts:17:1 › sem a classe .mov o conteúdo permanece visível
+
+    1) movimento reduzido › o conteúdo aparece e a pipeline continua animando
+
+        Error: a pipeline não pode zerar animation no reduce
+
+        expect(received).not.toBe(expected) // Object.is equality
+
+        Expected: not "none"
+
+          12 |     const animacao = await token.evaluate((el) => getComputedStyle(el).animationName);
+        > 13 |     expect(animacao, "a pipeline não pode zerar animation no reduce").not.toBe("none");
+
+        — o `*{animation:none!important}` do 32cfce7 zera o token `.lane.a .tok`.
+
+    2) sem a classe .mov o conteúdo permanece visível
+
+        Error: sem .mov o .rv não pode nascer em opacity 0
+
+        expect(locator).toHaveCSS(expected) failed
+
+        Locator:  locator('#pipeline h2')
+        Expected: "1"
+        Received: "0"
+        Timeout:  5000ms
+
+          - waiting for locator('#pipeline h2')
+            14 × locator resolved to <h2 class="rv">Antes e depois.</h2>
+               - unexpected value "0"
+
+        > 24 |   ).toHaveCSS("opacity", "1");
+
+        — `.rv { opacity: 0 }` sem a guarda `.mov`. Sem a classe no <html>, o h2
+        permanece invisível.
+
+    4 failed
+    exit=1
+
+## Restaurar e passar na HEAD
+
+    git checkout -- src/styles.css
+    npm run build
+    npm run test:e2e -- e2e/movimento.e2e.ts
+    echo exit=$?
+
+Saída real (4 passed, exit=0):
+
+    Running 4 tests using 2 workers
+      ✓  [desktop] › e2e/movimento.e2e.ts:17:1 › sem a classe .mov o conteúdo permanece visível (1.1s)
+      ✓  [desktop] › e2e/movimento.e2e.ts:6:3 › movimento reduzido › o conteúdo aparece e a pipeline continua animando (1.1s)
+      ✓  [mobile]  › e2e/movimento.e2e.ts:6:3 › movimento reduzido › o conteúdo aparece e a pipeline continua animando (1.1s)
+      ✓  [mobile]  › e2e/movimento.e2e.ts:17:1 › sem a classe .mov o conteúdo permanece visível (1.1s)
+
+      4 passed (3.6s)
+    exit=0

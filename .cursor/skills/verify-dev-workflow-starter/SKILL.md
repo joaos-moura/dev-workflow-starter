@@ -129,6 +129,7 @@ npm run validar:workflows   # YAML de .github/ (R1, R2)
 npm run validar:invariantes # os dois + node --test
 npm run build               # tsc --noEmit && vite build
 npm run test:e2e            # Playwright 1440 e 390, preview na 4173
+                            # no CI: job "E2E (Playwright)" em todo PR
 ```
 
 Invariantes que já não são texto:
@@ -142,7 +143,9 @@ Invariantes que já não são texto:
 - `e2e/ancora.e2e.ts` — carga com hash, seção sob a barra, h2 visível, reduce sem
   rolagem animada.
 - `e2e/movimento.e2e.ts` — com reduce, `#pipeline h2` visível e
-  `.lane.a .tok` com `animationName !== none`.
+  `.lane.a .tok` com `animationName !== none`; sem `.mov`, o `.rv` permanece
+  visível. Roda no job **E2E (Playwright)** de `.github/workflows/ci.yml` em
+  todo PR (não só pelo helper).
 
 ## Checagens de PR (sem aprovar HML/PRD)
 
@@ -152,7 +155,7 @@ Invariantes que já não são texto:
 #      gh pr view 13 --json isDraft,state,statusCheckRollup
 ```
 
-Num pull request estes jobs **precisam passar**: CI, CodeQL, eslint, reviewdog,
+Num pull request estes jobs **precisam passar**: CI, **E2E (Playwright)**, CodeQL, eslint, reviewdog,
 Detecção de tecnologia, Gates de segurança, Testes e cobertura, Build e scan,
 Preview PR, CD Dev (inerte no PR, termina verde).
 

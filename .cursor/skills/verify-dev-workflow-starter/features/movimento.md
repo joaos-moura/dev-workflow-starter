@@ -32,10 +32,10 @@ const nome = await page
 expect(nome).not.toBe("none");
 ```
 
-Isso vive em `e2e/movimento.e2e.ts` e em `drive.mjs movimento`. O CSS passa no
-PostCSS `npm run validar:movimento`: qualquer `* { animation: none }` dentro
-de `prefers-reduced-motion`, ou `.rv { opacity: 0 }` sem `.mov`, quebra o
-script.
+Isso vive em `e2e/movimento.e2e.ts` (job **E2E (Playwright)** no CI) e em
+`drive.mjs movimento`. Há um segundo caso no e2e: tira a classe `.mov` e exige
+`#pipeline h2` com opacity 1 — pega o `.rv { opacity: 0 }` sem guarda. O CSS
+também passa no PostCSS `npm run validar:movimento`.
 
 ## Gotchas
 
