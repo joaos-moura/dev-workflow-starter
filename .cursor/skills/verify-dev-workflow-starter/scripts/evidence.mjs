@@ -17,6 +17,14 @@ async function captura(nome, { largura, reduced, hash, seletor }) {
   });
   await page.goto(`${url}${hash ?? ""}`, { waitUntil: "networkidle" });
   await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(async () => {
+    const passo = 360;
+    for (let y = 0; y < document.body.scrollHeight; y += passo) {
+      window.scrollTo(0, y);
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    window.scrollTo(0, 0);
+  });
   const arquivo = join(destino, nome);
   if (seletor) {
     await page.locator(seletor).screenshot({ path: arquivo });

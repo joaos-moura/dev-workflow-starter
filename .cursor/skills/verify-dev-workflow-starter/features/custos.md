@@ -38,8 +38,8 @@ O helper faz esse caminho: `node scripts/drive.mjs custos`.
 
 - O bloco Azure é `role="group"`, não `<section>` — uma `<section>` extra quebra
   a contagem das doze seções.
-- Radio visualmente escondido: clique o **texto** (`getByText("Enterprise", { exact: true })`)
-  ou o `getByRole("radio")` pelo nome, nunca o input pelo clique em coordenadas.
+- Radio e switch visualmente escondidos: clique o **rótulo** (`label.chave` ou
+  `getByText("Enterprise", { exact: true })`), nunca o input.
 - `upgrade-ghas` some quando o GHAS liga; o preço entra no `mensal-gh`.
 - Não existe setter de teste. Mude committers pelo campo
   `Committers ativos (90 dias)` se precisar de outro valor de upgrade.

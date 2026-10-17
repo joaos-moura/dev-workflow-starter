@@ -1,0 +1,13 @@
+# Prova: o validador falha no concurrency de workflow do #15
+
+Comando (com o bloco antigo recolocado só neste passo, depois revertido):
+
+    npm run validar:pipeline
+
+Trecho da falha:
+
+    > node .github/scripts/validar-concorrencia-pipeline.mjs
+
+    concurrency no nível do workflow (group=pipeline-${{ github.ref }}). Isso cancela CI e deploy juntos. Use grupo por job.
+
+O teste `src/invariantes/pipeline.test.ts` > "aceita o pipeline.yml atual" quebra pela mesma mensagem.

@@ -38,13 +38,19 @@ async function custos(page) {
     falha(`upgrade GHAS inesperado: ${upgrade}`);
   }
 
-  await ghas.click();
+  const rotuloGhas = page.locator("label.chave").filter({ has: ghas });
+  await rotuloGhas.scrollIntoViewIfNeeded();
+  await rotuloGhas.click();
   if (!(await github.getByTestId("mensal-gh").innerText()).includes("1.060,00")) {
     falha("Com GHAS, o GitHub Team deveria ir a US$ 1.060,00.");
   }
-  await ghas.click();
+  await rotuloGhas.click();
 
-  await page.getByRole("form", { name: "GitHub" }).getByText("Enterprise", { exact: true }).click();
+  const enterprise = page.getByRole("form", { name: "GitHub" }).getByText("Enterprise", {
+    exact: true,
+  });
+  await enterprise.scrollIntoViewIfNeeded();
+  await enterprise.click();
   const capacidade = await page.getByTestId("capacidade-gh").innerText();
   if (!capacidade.includes("50.000") || !capacidade.includes("500")) {
     falha(`capacidade Enterprise inesperada: ${capacidade}`);
@@ -110,10 +116,9 @@ if (!acao) {
 }
 
 const browser = await chromium.launch();
-const reduced = recurso === "movimento";
 const page = await browser.newPage({
   viewport: { width: 1440, height: 900 },
-  reducedMotion: reduced ? "reduce" : "no-preference",
+  reducedMotion: "reduce",
 });
 try {
   await acao(page);

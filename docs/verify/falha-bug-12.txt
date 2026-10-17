@@ -1,0 +1,19 @@
+# Prova: o teste de estilo falha no seletor universal do #12
+
+Comando (com o CSS antigo recolocado só neste passo, depois revertido):
+
+    npx vitest run src/invariantes/estilo.test.ts
+
+Trecho da falha:
+
+    FAIL  src/invariantes/estilo.test.ts > seletor universal não zera movimento > aceita o styles.css atual
+    AssertionError: expected [Function] to not throw an error but 'Error: seletor universal com animatio…' was thrown
+
+    + Received:
+    "Error: seletor universal com animation:none ou transition:none:
+    * { animation: none !important; transition: none !important; }
+    *::before { animation: none !important; transition: none !important; }
+    *::after { animation: none !important; transition: none !important; }"
+
+     ❯ src/invariantes/estilo.test.ts:16:46
+         expect(() => validarEstilo(estilos)).not.toThrow();
