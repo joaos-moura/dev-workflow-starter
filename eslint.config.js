@@ -39,5 +39,12 @@ export default tseslint.config(
       sourceType: "module",
     },
   },
+  {
+    files: [".cursor/skills/**/*.mjs"],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+      sourceType: "module",
+    },
+  },
   eslintConfigPrettier,
 );
