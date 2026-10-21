@@ -238,7 +238,7 @@ describe("seções da página", () => {
     if (!diagrama) throw new Error("diagrama antes/depois ausente");
     expect(diagrama).toHaveAttribute("aria-describedby", "nota-antes nota-depois");
     expect(secao).toHaveTextContent("Erro só em HML · dias");
-    expect(secao).toHaveTextContent("Erro no PR · minutos");
+    expect(secao).toHaveTextContent("Erro pego no PR, em minutos, e corrigido antes do build");
     expect(secao.querySelector(".lane.b .stop.x")).toHaveTextContent("HML");
     expect(secao.querySelector(".lane.a .stop.cedo")).toHaveTextContent("PR");
     expect(secao.querySelectorAll(".lane.a .tok")).toHaveLength(1);

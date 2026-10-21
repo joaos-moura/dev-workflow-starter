@@ -1129,13 +1129,30 @@ footer a {
 }
 
 .lane.a .stop.cedo {
-  color: var(--warn);
+  color: var(--ok);
   font-weight: 600;
 }
 
 .lane.a .stop.cedo i {
-  border-color: var(--warn);
-  background: var(--warn-soft);
+  display: grid;
+  place-items: center;
+  color: var(--ok);
+}
+
+.lane.a .stop.cedo .tok {
+  position: static;
+  top: auto;
+  left: auto;
+  width: 14px;
+  height: 14px;
+  background: transparent;
+  z-index: auto;
+}
+
+.lane.a .stop.cedo .tok svg {
+  display: block;
+  width: 14px;
+  height: 14px;
 }
 
 .tok {
@@ -1155,7 +1172,7 @@ footer a {
 
 .lane.a .tok {
   background: var(--ok);
-  animation: ta 4.8s linear infinite;
+  animation: pulso 2.4s ease-in-out infinite;
 }
 
 @keyframes tb-hml {
@@ -1165,23 +1182,6 @@ footer a {
   72%,
   100% {
     left: calc(62.5% - 7px);
-  }
-}
-
-@keyframes ta {
-  0% {
-    left: 28px;
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    left: calc(100% - 42px);
-    opacity: 0;
   }
 }
 
@@ -1594,11 +1594,15 @@ footer a {
   }
 
   .mov .lane.a .stop.cedo {
-    animation: acende-cedo-texto 4.8s ease-in-out infinite;
+    animation: corrige-texto 4.8s ease forwards;
   }
 
   .mov .lane.a .stop.cedo i {
-    animation: acende-cedo-ponto 4.8s ease-in-out infinite;
+    animation: corrige-ponto 4.8s ease forwards;
+  }
+
+  .mov .lane.a .stop.cedo .tok {
+    animation: surge-escudo 4.8s ease forwards;
   }
 
   .mov [data-sequencia] [data-passo]:not(.st) {
@@ -1653,29 +1657,40 @@ footer a {
   }
 }
 
-@keyframes acende-cedo-texto {
+@keyframes corrige-texto {
   0%,
-  12% {
-    color: var(--ink3);
-  }
-  20%,
-  100% {
+  40% {
     color: var(--warn);
+  }
+  70%,
+  100% {
+    color: var(--ok);
   }
 }
 
-@keyframes acende-cedo-ponto {
+@keyframes corrige-ponto {
   0%,
-  12% {
-    background: #fff;
-    border-color: var(--line);
-    box-shadow: none;
-  }
-  20%,
-  100% {
+  40% {
     background: var(--warn-soft);
     border-color: var(--warn);
-    box-shadow: 0 0 0 4px var(--warn-soft);
+    color: var(--warn);
+  }
+  70%,
+  100% {
+    background: var(--ok-soft);
+    border-color: var(--ok);
+    color: var(--ok);
+  }
+}
+
+@keyframes surge-escudo {
+  0%,
+  40% {
+    opacity: 0;
+  }
+  70%,
+  100% {
+    opacity: 1;
   }
 }
 

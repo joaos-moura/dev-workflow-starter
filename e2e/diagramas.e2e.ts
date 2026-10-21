@@ -10,7 +10,7 @@ test.describe("movimento reduzido", () => {
     await expect(erroAntigo).toHaveCSS("color", "rgb(217, 72, 15)");
     await expect(page.locator("#pipeline .lane.a .stop.cedo")).toHaveCSS(
       "color",
-      "rgb(217, 72, 15)",
+      "rgb(14, 159, 110)",
     );
 
     await expect(page.locator("#pr .st.on")).toHaveCount(5);

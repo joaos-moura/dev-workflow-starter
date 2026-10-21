@@ -62,7 +62,11 @@ async function pipeline(page) {
   const secao = page.getByRole("region", { name: "Pipeline" });
   await visivel(page, secao.getByRole("heading", { name: "O erro muda de lugar." }), "título");
   await visivel(page, secao.getByText("Erro só em HML · dias"), "antes");
-  await visivel(page, secao.getByText("Erro no PR · minutos"), "depois");
+  await visivel(
+    page,
+    secao.getByText("Erro pego no PR, em minutos, e corrigido antes do build"),
+    "depois",
+  );
 }
 
 async function usar(page) {

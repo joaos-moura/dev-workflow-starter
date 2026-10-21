@@ -10,7 +10,8 @@ export type NomeIcone =
   | "link"
   | "comentario"
   | "grafico"
-  | "volta";
+  | "volta"
+  | "escudo";
 
 function desenho(nome: NomeIcone): ReactNode {
   switch (nome) {
@@ -78,6 +79,13 @@ function desenho(nome: NomeIcone): ReactNode {
       );
     case "volta":
       return <path d="M8 8H4v4M4.5 8A8 8 0 1 1 6 17.5" />;
+    case "escudo":
+      return (
+        <>
+          <path d="M12 3.2 19 6v5.4c0 3.6-2.7 6.3-7 8.4-4.3-2.1-7-4.8-7-8.4V6l7-2.8Z" />
+          <path d="m9 12 2 2 4-4" />
+        </>
+      );
     default: {
       const nunca: never = nome;
       return nunca;
