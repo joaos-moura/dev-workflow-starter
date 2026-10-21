@@ -8,14 +8,15 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/prerender.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint . && prettier --check .",
     "validar:backstage": "node .github/scripts/validar-template-backstage.mjs",
     "validar:movimento": "node .github/scripts/validar-movimento.mjs src/styles.css",
     "validar:workflows": "node .github/scripts/validar-workflows.mjs .",
-    "validar:invariantes": "npm run validar:movimento && npm run validar:workflows && node --test .github/scripts/validar-movimento.test.mjs .github/scripts/validar-workflows.test.mjs",
+    "validar:pagina": "node .github/scripts/validar-pagina.mjs",
+    "validar:invariantes": "npm run validar:movimento && npm run validar:workflows && npm run validar:pagina && node --test .github/scripts/validar-movimento.test.mjs .github/scripts/validar-workflows.test.mjs .github/scripts/validar-pagina.test.mjs",
     "format": "prettier --write .",
     "test:e2e": "playwright test"
   },

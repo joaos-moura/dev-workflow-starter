@@ -33,6 +33,10 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run validar:invariantes
+
+      - name: Página sem custo nem empresa
+        run: npm run validar:pagina
+
       - run: npm run build
 
       - name: Validar template do Backstage

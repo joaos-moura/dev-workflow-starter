@@ -4,12 +4,14 @@ import { Arquitetura } from "./secoes/Arquitetura";
 import { Caminho } from "./secoes/Caminho";
 import { ComoUsar } from "./secoes/ComoUsar";
 import { Contas } from "./secoes/Contas";
-import { Custos } from "./secoes/Custos";
 import { Desafio } from "./secoes/Desafio";
 import { Futuro } from "./secoes/Futuro";
+import { Ghas } from "./secoes/Ghas";
 import { Padrao } from "./secoes/Padrao";
 import { Pipeline } from "./secoes/Pipeline";
 import { Portal } from "./secoes/Portal";
+import { PrAberto } from "./secoes/PrAberto";
+import { Promocao } from "./secoes/Promocao";
 import { Radar } from "./secoes/Radar";
 import { Solucao } from "./secoes/Solucao";
 
@@ -17,10 +19,10 @@ const LINKS = [
   ["#desafio", "Desafio"],
   ["#solucao", "Solução"],
   ["#portal", "Portal"],
-  ["#arquitetura", "Arquitetura"],
   ["#pipeline", "Pipeline"],
-  ["#radar", "Radar"],
-  ["#custos", "Custos"],
+  ["#pr", "No PR"],
+  ["#ghas", "GHAS"],
+  ["#promocao", "Promoção"],
   ["#usar", "Como usar"],
 ] as const;
 
@@ -52,7 +54,7 @@ export function App() {
       </nav>
       <header id="topo">
         <div className="wrap">
-          <span className="pill">Padrão de plataforma · gratuito · open source</span>
+          <span className="pill">Padrão de plataforma · open source</span>
           <h1>Do pedido ao ambiente, em minutos</h1>
           <p className="lead">
             Um template para o time sair da fila da infraestrutura: preview por pull request,
@@ -77,15 +79,17 @@ export function App() {
         <Contas />
         <Caminho />
         <Pipeline />
+        <PrAberto />
+        <Ghas />
+        <Promocao />
         <Radar />
         <Futuro />
-        <Custos />
         <ComoUsar />
       </main>
       <footer>
         <div className="wrap">
           <span>dev-workflow-starter · padrão de plataforma de engenharia</span>
-          <span>Template gratuito · MIT</span>
+          <span>Template · MIT</span>
         </div>
       </footer>
     </>

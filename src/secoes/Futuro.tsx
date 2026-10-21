@@ -55,7 +55,7 @@ export function Futuro() {
   return (
     <Secao
       id="futuro"
-      numero="10"
+      numero="13"
       rotulo="Hoje x Futuro"
       titulo="Do starter ao padrão."
       sub={

@@ -14,47 +14,14 @@ async function visivel(page, locator, rotulo) {
 }
 
 async function custos(page) {
-  await page.goto(`${url}#custos`);
-  const secao = page.locator("#custos");
-  await visivel(page, secao, "#custos");
-  await visivel(page, secao.getByRole("heading", { level: 2 }), "título de Custos");
-
-  const azure = page.getByRole("article", { name: "Azure DevOps · Cenário atual" });
-  await visivel(page, azure.getByTestId("mensal-az"), "total Azure");
-  if (!(await azure.getByTestId("mensal-az").innerText()).includes("160,00")) {
-    falha("Azure padrão deveria ser US$ 160,00/mês.");
-  }
-
-  const github = page.getByRole("article", { name: "GitHub" });
-  if (!(await github.getByTestId("mensal-gh").innerText()).includes("80,00")) {
-    falha("GitHub padrão deveria ser US$ 80,00/mês, GHAS desligado.");
-  }
-
-  const ghas = page.getByRole("switch", { name: /GHAS ligado/ });
-  if (await ghas.isChecked()) falha("GHAS precisa nascer desligado.");
-  await visivel(page, page.getByTestId("upgrade-ghas"), "upgrade GHAS");
-  const upgrade = await page.getByTestId("upgrade-ghas").innerText();
-  if (!upgrade.includes("980,00") || !upgrade.includes("Code Security")) {
-    falha(`upgrade GHAS inesperado: ${upgrade}`);
-  }
-
-  const rotuloGhas = page.locator("label.chave").filter({ has: ghas });
-  await rotuloGhas.scrollIntoViewIfNeeded();
-  await rotuloGhas.click();
-  if (!(await github.getByTestId("mensal-gh").innerText()).includes("1.060,00")) {
-    falha("Com GHAS, o GitHub Team deveria ir a US$ 1.060,00.");
-  }
-  await rotuloGhas.click();
-
-  const enterprise = page.getByRole("form", { name: "GitHub" }).getByText("Enterprise", {
-    exact: true,
-  });
-  await enterprise.scrollIntoViewIfNeeded();
-  await enterprise.click();
-  const capacidade = await page.getByTestId("capacidade-gh").innerText();
-  if (!capacidade.includes("50.000") || !capacidade.includes("500")) {
-    falha(`capacidade Enterprise inesperada: ${capacidade}`);
-  }
+  await page.goto(`${url}#pr`);
+  if ((await page.locator("#custos").count()) !== 0)
+    falha("a seção de custos ainda está na página.");
+  const secao = page.locator("#pr");
+  await visivel(page, secao, "#pr");
+  await visivel(page, secao.getByText("Ilustração"), "ilustração");
+  await visivel(page, secao.getByText("Lint"), "lint");
+  await visivel(page, secao.getByText("reviewdog"), "comentário");
 }
 
 async function ancoras(page) {
@@ -93,10 +60,13 @@ async function movimento(page) {
 async function pipeline(page) {
   await page.goto(`${url}#pipeline`);
   const secao = page.getByRole("region", { name: "Pipeline" });
-  await visivel(page, secao.getByRole("heading", { name: "Antes e depois." }), "título");
-  await visivel(page, secao.getByText("Preview PR"), "Preview PR");
-  await visivel(page, secao.getByText("CD Dev"), "CD Dev");
-  await visivel(page, secao.getByText("CD HML"), "CD HML");
+  await visivel(page, secao.getByRole("heading", { name: "O erro muda de lugar." }), "título");
+  await visivel(page, secao.getByText("Erro só em HML · dias"), "antes");
+  await visivel(
+    page,
+    secao.getByText("Erro pego no PR, em minutos, e corrigido antes do build"),
+    "depois",
+  );
 }
 
 async function usar(page) {
