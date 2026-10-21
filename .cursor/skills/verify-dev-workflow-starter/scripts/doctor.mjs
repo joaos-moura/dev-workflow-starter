@@ -29,13 +29,13 @@ if (!(await h1.isVisible())) falha("h1 ausente.");
 const opacidade = await h1.evaluate((el) => getComputedStyle(el).opacity);
 if (opacidade !== "1") falha(`h1 com opacity ${opacidade}; conteúdo precisa nascer visível.`);
 
-for (const id of ["desafio", "pipeline", "custos", "usar"]) {
+for (const id of ["desafio", "pipeline", "pr", "ghas", "promocao", "usar"]) {
   const secao = page.locator(`#${id}`);
   if ((await secao.count()) !== 1) falha(`seção #${id} ausente.`);
 }
 
 const secoes = await page.locator("main > section").count();
-if (secoes !== 12) falha(`esperava 12 seções, achei ${secoes}.`);
+if (secoes !== 14) falha(`esperava 14 seções, achei ${secoes}.`);
 
 await browser.close();
-console.log(`doctor ok: ${url} · 12 seções · h1 visível · nav Seções`);
+console.log(`doctor ok: ${url} · 14 seções · h1 visível · nav Seções`);

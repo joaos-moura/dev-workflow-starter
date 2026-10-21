@@ -5,7 +5,7 @@ export function ComoUsar() {
   return (
     <Secao
       id="usar"
-      numero="12"
+      numero="14"
       rotulo="Como usar"
       titulo="Do template ao preview em seis passos."
       alt

@@ -11,7 +11,7 @@ async function ancorasDoMenu(page: Page) {
   const ancoras = await page
     .locator("nav .links a")
     .evaluateAll((links) => links.map((link) => link.getAttribute("href") ?? ""));
-  expect(ancoras).toEqual(expect.arrayContaining(["#custos", "#usar"]));
+  expect(ancoras).toEqual(expect.arrayContaining(["#pr", "#promocao", "#usar"]));
   return [...new Set([...ancoras, "#futuro"])];
 }
 

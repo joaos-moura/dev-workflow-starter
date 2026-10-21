@@ -21,7 +21,7 @@ export default tseslint.config(
   reactHooks.configs.flat.recommended,
   {
     files: ["src/**/*.tsx"],
-    ignores: ["src/**/*.test.tsx"],
+    ignores: ["src/**/*.test.tsx", "src/entry-server.tsx"],
     plugins: reactRefresh.configs.vite.plugins,
     rules: reactRefresh.configs.vite.rules,
   },
@@ -33,7 +33,7 @@ export default tseslint.config(
     },
   },
   {
-    files: [".github/scripts/**/*.mjs"],
+    files: [".github/scripts/**/*.mjs", "scripts/**/*.mjs"],
     languageOptions: {
       globals: globals.node,
       sourceType: "module",

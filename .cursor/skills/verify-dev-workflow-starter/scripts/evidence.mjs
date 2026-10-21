@@ -39,22 +39,22 @@ async function captura(nome, { largura, reduced, hash, seletor }) {
   console.log(arquivo);
 }
 
-await captura("custos-1440.png", {
+await captura("pr-1440.png", {
   largura: 1440,
   reduced: false,
-  hash: "#custos",
-  seletor: "#custos",
+  hash: "#pr",
+  seletor: "#pr",
 });
-await captura("custos-390.png", {
+await captura("pr-390.png", {
   largura: 390,
   reduced: false,
-  hash: "#custos",
-  seletor: "#custos",
+  hash: "#pr",
+  seletor: "#pr",
 });
-await captura("ancora-custos-1440.png", {
+await captura("ancora-pr-1440.png", {
   largura: 1440,
   reduced: true,
-  hash: "#custos",
+  hash: "#pr",
 });
 await captura("pipeline-reduce-1440.png", {
   largura: 1440,

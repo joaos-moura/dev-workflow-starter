@@ -43,7 +43,7 @@ export function Radar() {
   return (
     <Secao
       id="radar"
-      numero="09"
+      numero="12"
       rotulo="Radar"
       titulo="Adotar, avaliar, segurar."
       sub="Datadog, GitHub Enterprise e GitHub Advanced Security só aparecem na versão empresa."

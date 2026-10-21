@@ -32,7 +32,7 @@ export function Solucao() {
       id="solucao"
       numero="02"
       rotulo="A solução"
-      titulo="Sete peças, nenhum serviço pago."
+      titulo="Sete peças do mesmo fluxo."
       sub="O starter entrega o miolo do padrão. Cada peça funciona sozinha e todas passam pelo GitHub."
       alt
     >

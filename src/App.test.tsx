@@ -22,10 +22,10 @@ describe("estrutura da página", () => {
       "#desafio",
       "#solucao",
       "#portal",
-      "#arquitetura",
       "#pipeline",
-      "#radar",
-      "#custos",
+      "#pr",
+      "#ghas",
+      "#promocao",
       "#usar",
       "#usar",
     ]);
@@ -39,7 +39,7 @@ describe("estrutura da página", () => {
     expect(
       within(hero).getByRole("heading", { level: 1, name: "Do pedido ao ambiente, em minutos" }),
     ).toBeInTheDocument();
-    expect(hero).toHaveTextContent("Padrão de plataforma · gratuito · open source");
+    expect(hero).toHaveTextContent("Padrão de plataforma · open source");
     expect(hero).toHaveTextContent("preview por pull request");
     expect(within(hero).getByRole("link", { name: "Começar agora" })).toHaveAttribute(
       "href",
@@ -51,7 +51,7 @@ describe("estrutura da página", () => {
     );
   });
 
-  it("segue a ordem final das doze seções", () => {
+  it("segue a ordem final das seções", () => {
     const rotulos = screen
       .getAllByRole("region")
       .filter((secao) => secao.tagName === "SECTION")
@@ -65,9 +65,11 @@ describe("estrutura da página", () => {
       "Contas por ambiente",
       "Caminho feliz",
       "Pipeline",
+      "No PR",
+      "GHAS",
+      "Promoção",
       "Radar",
       "Hoje x Futuro",
-      "Custos",
       "Como usar",
     ]);
     const numeros = [...document.querySelectorAll("section .eyebrow")].map((eyebrow) =>
@@ -86,12 +88,14 @@ describe("estrutura da página", () => {
       "10",
       "11",
       "12",
+      "13",
+      "14",
     ]);
   });
 
   it("cita a licença MIT do repositório no rodapé", () => {
     const rodape = screen.getByRole("contentinfo");
-    expect(rodape).toHaveTextContent("Template gratuito · MIT");
+    expect(rodape).toHaveTextContent("Template · MIT");
   });
 });
 
@@ -118,7 +122,7 @@ describe("seções da página", () => {
 
   it("renderiza a solução", () => {
     const secao = regiao("A solução");
-    expect(secao).toHaveTextContent("Sete peças, nenhum serviço pago.");
+    expect(secao).toHaveTextContent("Sete peças do mesmo fluxo.");
     for (const peca of [
       "Template",
       "Preview por pull request",
@@ -225,53 +229,56 @@ describe("seções da página", () => {
     expect(secao).toHaveTextContent("health da API");
   });
 
-  it("renderiza o pipeline antes e depois", () => {
+  it("mostra o erro em HML no fluxo antigo e no PR no fluxo novo", () => {
     const secao = regiao("Pipeline");
-    expect(within(secao).getByRole("heading", { name: "Antes e depois." })).toBeInTheDocument();
-    expect(secao).toHaveTextContent("Antes · trava em HML");
-    expect(secao).toHaveTextContent("HML · fila");
-    expect(secao).toHaveTextContent("Depois · flui");
-    expect(secao).toHaveTextContent("Merge → Dev");
-    expect(within(secao).getByRole("heading", { name: "Antes" })).toBeInTheDocument();
-    expect(within(secao).getByRole("heading", { name: "Depois" })).toBeInTheDocument();
-    expect(secao).toHaveTextContent("Só existe HML.");
-    expect(secao).toHaveTextContent("A governança de acesso à AWS trava o serviço.");
-    expect(secao).toHaveTextContent("O devcontainer prepara o local em minutos.");
-    expect(secao).toHaveTextContent("⏱ dias");
-    expect(secao).toHaveTextContent("⏱ minutos");
+    expect(
+      within(secao).getByRole("heading", { name: "O erro muda de lugar." }),
+    ).toBeInTheDocument();
+    const diagrama = secao.querySelector("[data-diagrama='antes-depois']");
+    if (!diagrama) throw new Error("diagrama antes/depois ausente");
+    expect(diagrama).toHaveAttribute("aria-describedby", "nota-antes nota-depois");
+    expect(secao).toHaveTextContent("Erro só em HML · dias");
+    expect(secao).toHaveTextContent("Erro no PR · minutos");
+    expect(secao.querySelector(".lane.b .stop.x")).toHaveTextContent("HML");
+    expect(secao.querySelector(".lane.a .stop.cedo")).toHaveTextContent("PR");
+    expect(secao.querySelectorAll(".lane.a .tok")).toHaveLength(1);
   });
 
-  it("lista a esteira antiga e a nova, estágio por estágio", () => {
-    const secao = regiao("Pipeline");
-    const estagios = (titulo: string) => {
-      const coluna = within(secao).getByRole("heading", { name: titulo }).parentElement;
-      if (!coluna) throw new Error(`Coluna ${titulo} ausente.`);
-      return within(coluna)
-        .getAllByRole("listitem")
-        .map((item) => item.firstChild?.textContent);
-    };
-    expect(estagios("Esteira antes")).toEqual([
-      "Detecção",
-      "Gates 1–4",
-      "Testes e cobertura",
-      "CI Build, scan e push ECR",
-      "CD HML",
-      "Perf HML (Datadog APM)",
-      "CD PRD",
-    ]);
-    expect(estagios("Esteira depois")).toEqual([
-      "Detecção de tecnologia",
-      "Gates de segurança",
-      "Testes e cobertura",
-      "Build e scan",
-      "Preview PR",
-      "CD Dev",
-      "CD HML",
-      "Perf HML",
-      "CD PRD",
-    ]);
-    expect(secao).toHaveTextContent("CodeQL, Dependabot, secret scan, reviewdog");
-    expect(secao).toHaveTextContent("na versão empresa");
+  it("explica o PR, o GHAS e a promoção com rótulos curtos", () => {
+    const pr = regiao("No PR");
+    expect(within(pr).getByRole("heading", { name: "Pronto antes do merge." })).toBeInTheDocument();
+    expect(pr).toHaveTextContent("Ilustração");
+    expect(pr).toHaveTextContent("O que já está pronto quando o PR abre");
+    for (const nome of ["Lint", "Testes", "CodeQL", "Secret scan", "Dependências"]) {
+      expect(within(pr).getByText(nome)).toBeInTheDocument();
+    }
+    expect(pr).toHaveTextContent("check obrigatório");
+    expect(pr).toHaveTextContent("SHA · Trivy · build único");
+    expect(pr).toHaveTextContent("reviewdog");
+
+    const ghas = regiao("GHAS");
+    expect(within(ghas).getByText("Push protection")).toBeInTheDocument();
+    expect(ghas).toHaveTextContent("Anota a linha nova no diff");
+    expect(ghas).toHaveTextContent("Dependency review");
+    expect(ghas).toHaveTextContent("Licença: só se a action negar");
+    expect(ghas).toHaveTextContent("Merge travado");
+    expect(ghas).toHaveTextContent("Code scanning: limiar de severidade");
+    expect(ghas).toHaveTextContent("Security and quality");
+    expect(ghas).toHaveTextContent("Overview é da organização");
+    expect(ghas).toHaveTextContent("Dependabot alerta no ramo padrão");
+    expect(ghas).toHaveTextContent("Não é um check do PR");
+
+    const promocao = regiao("Promoção");
+    expect(promocao.querySelector("[data-diagrama='promocao']")).toHaveAttribute(
+      "data-estado",
+      "animando",
+    );
+    expect(promocao).toHaveTextContent("ECR · mesma imagem · smoke");
+    expect(promocao).toHaveTextContent("p95 · erro · para se piorar");
+    expect(promocao).toHaveTextContent("Canário");
+    expect(promocao).toHaveTextContent("Rollback automático");
+    expect(promocao).toHaveTextContent("Sem rebuild");
+    expect(promocao).toHaveTextContent("OIDC · um papel por conta");
   });
 
   it("renderiza o radar", () => {
